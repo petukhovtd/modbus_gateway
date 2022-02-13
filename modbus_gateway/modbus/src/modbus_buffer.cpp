@@ -72,12 +72,12 @@ FrameType ModbusBuffer::GetType() const
 
 AduBuffer::iterator ModbusBuffer::begin()
 {
-     return buffer_->begin() + GetAduStart( type_ );
+     return buffer_.begin() + GetAduStart( type_ );
 }
 
 AduBuffer::const_iterator ModbusBuffer::begin() const
 {
-     return buffer_->begin() + GetAduStart( type_ );
+     return buffer_.begin() + GetAduStart( type_ );
 }
 
 AduBuffer::iterator ModbusBuffer::end()
@@ -92,7 +92,7 @@ AduBuffer::const_iterator ModbusBuffer::end() const
 
 AduBuffer::const_iterator ModbusBuffer::cbegin() const
 {
-     return buffer_->begin() + GetAduStart( type_ );
+     return buffer_.begin() + GetAduStart( type_ );
 }
 
 AduBuffer::const_iterator ModbusBuffer::cend() const
@@ -119,22 +119,22 @@ size_t ModbusBuffer::GetAduSize() const
 
 uint8_t ModbusBuffer::GetUnitId() const
 {
-     return CommonGetter( type_, CommonField::UnitId, buffer_->begin() );
+     return CommonGetter( type_, CommonField::UnitId, buffer_.begin() );
 }
 
 void ModbusBuffer::SetUnitId( uint8_t id )
 {
-     return CommonSetter( type_, CommonField::UnitId, buffer_->begin(), id );
+     return CommonSetter( type_, CommonField::UnitId, buffer_.begin(), id );
 }
 
 uint8_t ModbusBuffer::GetFunctionCode() const
 {
-     return CommonGetter( type_, CommonField::FunctionCode, buffer_->begin() );
+     return CommonGetter( type_, CommonField::FunctionCode, buffer_.begin() );
 }
 
 void ModbusBuffer::SetFunctionCode( uint8_t fc )
 {
-     return CommonSetter( type_, CommonField::FunctionCode, buffer_->begin(), fc );
+     return CommonSetter( type_, CommonField::FunctionCode, buffer_.begin(), fc );
 }
 
 void ModbusBuffer::ConvertTo( FrameType toType )
@@ -147,21 +147,24 @@ void ModbusBuffer::ConvertTo( FrameType toType )
      uint8_t unitId = GetUnitId();
      size_t pduSize = CalculatePduSize( type_, aduSize_ );
 
+     if( pduSize >= aduSize_ )
+     {
+          throw std::logic_error( "pdu size more then adu size" );
+     }
+
      // TCP -> ASCII
      // RTU -> ASCII
      if( toType == FrameType::ASCII )
      {
-          ascii::ToAscii( buffer_->begin() + functionCodeGeneralPos,
-                          buffer_->begin() + functionCodeASCIIPos,
+          ascii::ToAscii( buffer_.begin() + functionCodeGeneralPos,
+                          buffer_.begin() + functionCodeASCIIPos,
                           pduSize );
           pduSize *= 2;
 
-          *( buffer_->begin() + GetAduStart( FrameType::ASCII ) ) = asciiStart;
+          auto asciiBeginIt = buffer_.begin() + GetAduStart( FrameType::ASCII );
+          *asciiBeginIt = asciiStart;
 
-          auto asciiEndIt = ( buffer_->begin()
-                              + GetAduStart( FrameType::ASCII )
-                              + CalculateAduSize( FrameType::ASCII, pduSize )
-                              + asciiLrcSize );
+          auto asciiEndIt = asciiBeginIt + CalculateAduSize( FrameType::ASCII, pduSize ) - asciiEndSize;
           const auto pair = U16ToBuffer( asciiEnd );
           *asciiEndIt = pair.first;
           ++asciiEndIt;
@@ -172,8 +175,8 @@ void ModbusBuffer::ConvertTo( FrameType toType )
      // ASCII -> TCP
      if( type_ == FrameType::ASCII )
      {
-          ascii::FromAscii( buffer_->begin() + functionCodeASCIIPos,
-                            buffer_->begin() + functionCodeGeneralPos,
+          ascii::FromAscii( buffer_.begin() + functionCodeASCIIPos,
+                            buffer_.begin() + functionCodeGeneralPos,
                             pduSize );
           pduSize /= 2;
      }

@@ -5,7 +5,7 @@ using namespace modbus;
 
 TEST( ModbusTypes, BufferSize )
 {
-     EXPECT_EQ( MakeAduBuffer()->size(), aduBufferMaxSize );
+     EXPECT_EQ( MakeAduBuffer().size(), aduBufferMaxSize );
 }
 
 TEST( ModbusTypes, GetAduStart )

@@ -170,3 +170,33 @@ TEST( ModbusFraming, asciiFromAscii )
           EXPECT_TRUE( test::Compare( ascii.cbegin(), ascii.cend(), binaryReference.begin(), binaryReference.end() ) );
      }
 }
+
+TEST( ModbusFraming, asciiCalculateLrc )
+{
+     using namespace modbus;
+     {
+          static const AduBuffer buf = { 0x10, 0x03, 0x02, 0xBC, 0x00, 0x02 };
+          EXPECT_EQ( ascii::CalculateLrc( buf.begin(), buf.end() ), 0x2D );
+     }
+     {
+          static const AduBuffer buf = { 0x10, 0x03, 0x00, 0x0A, 0x00, 0x01 };
+          EXPECT_EQ( ascii::CalculateLrc( buf.begin(), buf.end() ), 0xE2 );
+     }
+}
+
+TEST( ModbusFraming, CalculateCrc )
+{
+     using namespace modbus;
+     {
+          static const AduBuffer buf = { 0x01 };
+          EXPECT_EQ( CalculateCrc( buf.begin(), buf.end() ), 0x807E );
+     }
+     {
+          static const AduBuffer buf = { 0x02, 0x07 };
+          EXPECT_EQ( CalculateCrc( buf.begin(), buf.end() ), 0x1241 );
+     }
+     {
+          static const AduBuffer buf = { 0x03, 0x09, 0xAD };
+          EXPECT_EQ( CalculateCrc( buf.begin(), buf.end() ), 0x2D46 );
+     }
+}

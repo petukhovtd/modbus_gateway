@@ -81,7 +81,7 @@ public:
 
 private:
      FrameType type_;
-     AduBufferPtr buffer_;
+     AduBuffer buffer_;
      size_t aduSize_;
 };
 

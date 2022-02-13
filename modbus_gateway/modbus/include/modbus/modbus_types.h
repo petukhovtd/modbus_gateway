@@ -106,7 +106,7 @@ using AduBufferPtr = std::unique_ptr< AduBuffer >;
 
 /// @brief Создание буфера размера aduBufferMaxSize и заполнением aduDefaultValue
 /// @return
-AduBufferPtr MakeAduBuffer();
+AduBuffer MakeAduBuffer();
 
 /// @brief Получить индекс начала записи фрейма заданного типа
 /// @param[in] type

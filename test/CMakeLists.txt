@@ -11,6 +11,8 @@ set(SOURCES_TEST
           modbus/test_modbus_framing.cpp
           modbus/test_modbus_buffer.cpp
           modbus/test_modbus_buffer_tcp_wrapper.cpp
+          modbus/test_modbus_buffer_ascii_wrapper.cpp
+          modbus/test_modbus_buffer_rtu_wrapper.cpp
           )
 
 add_executable(${TEST_TARGET} ${SOURCES_TEST})

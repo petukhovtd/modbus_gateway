@@ -6,9 +6,9 @@
 namespace modbus
 {
 
-AduBufferPtr MakeAduBuffer()
+AduBuffer MakeAduBuffer()
 {
-     return std::make_unique< AduBufferPtr::element_type >( aduBufferMaxSize, aduDefaultValue );
+     return AduBuffer( aduBufferMaxSize, aduDefaultValue );
 }
 
 size_t GetAduStart( FrameType type )

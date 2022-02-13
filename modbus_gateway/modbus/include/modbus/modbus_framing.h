@@ -20,6 +20,12 @@ uint16_t U16FromBuffer( uint8_t first, uint8_t second );
 /// @return { first, second }
 std::pair< uint8_t, uint8_t > U16ToBuffer( uint16_t value );
 
+/// @brief Расчитать CRC последовательности байт
+/// @param[in] begin
+/// @param[in] end
+/// @return
+uint16_t CalculateCrc( modbus::AduBuffer::const_iterator begin, modbus::AduBuffer::const_iterator end );
+
 namespace ascii
 {
 
@@ -62,6 +68,12 @@ void ToAscii( modbus::AduBuffer::iterator from, modbus::AduBuffer::iterator to, 
 /// @param[in] size размер ascii данных
 /// @throw std::logic_error положение итераторов не соответствует ожиданиям
 void FromAscii( modbus::AduBuffer::iterator from, modbus::AduBuffer::iterator to, size_t size );
+
+/// @brief Расчитать LRC последовательности байт
+/// @param[in] begin
+/// @param[in] end
+/// @return
+uint8_t CalculateLrc( modbus::AduBuffer::const_iterator begin, modbus::AduBuffer::const_iterator end );
 
 }
 
