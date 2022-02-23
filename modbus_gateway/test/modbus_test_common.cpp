@@ -7,7 +7,10 @@ modbus::ModbusBuffer MakeModbusBuffer( const AduBuffer& frame, FrameType type )
 {
      ModbusBuffer modbusBuffer( type );
      std::copy( frame.begin(), frame.end(), modbusBuffer.begin() );
-     modbusBuffer.SetAduSize( frame.size() );
+     if( !modbusBuffer.SetAduSize( frame.size() ) )
+     {
+          throw std::logic_error( "invalid adu size" );
+     }
      return modbusBuffer;
 }
 

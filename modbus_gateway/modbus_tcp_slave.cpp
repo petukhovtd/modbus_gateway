@@ -4,6 +4,8 @@
 
 #include <exchange/exchange.h>
 
+#include <modbus/modbus_buffer.h>
+
 using namespace asio;
 
 namespace modbus_gateway

@@ -3,9 +3,6 @@
 #include <modbus/modbus_buffer.h>
 #include <modbus/modbus_types.h>
 #include <modbus/modbus_buffer_wrapper.h>
-#include <modbus/modbus_buffer_ascii_wrapper.h>
-#include <modbus/modbus_buffer_rtu_wrapper.h>
-#include <modbus/modbus_buffer_tcp_wrapper.h>
 
 using namespace modbus;
 
@@ -28,12 +25,16 @@ TEST( ModbusBuffer, SetSize )
           ModbusBuffer modbusBuffer( type );
           modbusBuffer.SetAduSize( size );
           EXPECT_EQ( std::distance( modbusBuffer.begin(), modbusBuffer.end() ), size );
+          EXPECT_TRUE( modbusBuffer.SetAduSize( GetAduMinSize( type ) ) );
+          EXPECT_TRUE( modbusBuffer.SetAduSize( GetAduMaxSize( type ) ) );
+          EXPECT_FALSE( modbusBuffer.SetAduSize( GetAduMinSize( type ) - 1 ) );
+          EXPECT_FALSE( modbusBuffer.SetAduSize( GetAduMaxSize( type ) + 1 ) );
      }
 }
 
 TEST( ModbusBuffer, WriteBuffer )
 {
-     static const std::vector< AduElementType > reference = { 1, 2, 3, 4, 5, 6, 7 };
+     static const std::vector< AduElementType > reference = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
      for( FrameType type: { FrameType::RTU, FrameType::TCP, FrameType::ASCII } )
      {
           ModbusBuffer modbusBuffer( type );

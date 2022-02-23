@@ -1,9 +1,5 @@
 set(TEST_TARGET test)
 
-include_directories(
-          .
-)
-
 set(SOURCES_TEST
           modbus_test_common.cpp
 
@@ -13,13 +9,16 @@ set(SOURCES_TEST
           modbus/test_modbus_buffer_tcp_wrapper.cpp
           modbus/test_modbus_buffer_ascii_wrapper.cpp
           modbus/test_modbus_buffer_rtu_wrapper.cpp
-          )
+)
 
 add_executable(${TEST_TARGET} ${SOURCES_TEST})
 
+target_include_directories( ${TEST_TARGET} PRIVATE . )
+
 target_link_libraries(
           ${TEST_TARGET}
-          ${LIBS}
           gtest
           gtest_main
+          modbus
 )
+
