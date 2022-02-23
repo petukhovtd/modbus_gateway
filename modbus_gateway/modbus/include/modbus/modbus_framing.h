@@ -1,5 +1,5 @@
-#ifndef MODBUS_GATEWAY_MODBUS_FRAMING_H
-#define MODBUS_GATEWAY_MODBUS_FRAMING_H
+#ifndef MODBUS_MODBUS_FRAMING_H
+#define MODBUS_MODBUS_FRAMING_H
 
 #include <modbus/modbus_types.h>
 

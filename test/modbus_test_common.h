@@ -1,6 +1,8 @@
 #ifndef MODBUS_GATEWAY_TEST_COMMON_H
 #define MODBUS_GATEWAY_TEST_COMMON_H
 
+#include <modbus/modbus_buffer.h>
+
 namespace modbus::test
 {
 
@@ -21,6 +23,8 @@ bool Compare( It beginLhs, It endLhs, It beginRhs, It endRhs )
      }
      return true;
 }
+
+modbus::ModbusBuffer MakeModbusBuffer( const AduBuffer& frame, FrameType type );
 
 }
 

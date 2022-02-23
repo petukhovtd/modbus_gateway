@@ -1,5 +1,5 @@
-#include "modbus/modbus_buffer_tcp_wrapper.h"
-#include "modbus/modbus_framing.h"
+#include <modbus/modbus_buffer_tcp_wrapper.h>
+#include <modbus/modbus_framing.h>
 
 #include <sstream>
 
@@ -54,19 +54,29 @@ uint16_t ModbusBufferTcpWrapper::GetProtocolId() const
      return TcpGetter( TcpField::ProtocolId, modbusBuffer_.begin() );
 }
 
-void ModbusBufferTcpWrapper::SetProtocolId( uint16_t protoId )
-{
-     TcpSetter( TcpField::ProtocolId, modbusBuffer_.begin(), protoId );
-}
-
 uint16_t ModbusBufferTcpWrapper::GetLength() const
 {
      return TcpGetter( TcpField::Length, modbusBuffer_.begin() );
 }
 
-void ModbusBufferTcpWrapper::SetLength( uint16_t length )
+CheckFrameResult ModbusBufferTcpWrapper::Check() const
 {
-     TcpSetter( TcpField::Length, modbusBuffer_.begin(), length );
+     if( TcpGetter( TcpField::ProtocolId, modbusBuffer_.begin() ) != modbusProtocolId )
+     {
+          return CheckFrameResult::TcpInvalidProtocolId;
+     }
+     if( TcpGetter( TcpField::Length, modbusBuffer_.begin() ) !=
+         ( modbusBuffer_.GetAduSize() - mbapSize + unitIdSize ) )
+     {
+          return CheckFrameResult::TcpInvalidLength;
+     }
+     return CheckFrameResult::NoError;
+}
+
+void ModbusBufferTcpWrapper::Update()
+{
+     TcpSetter( TcpField::ProtocolId, modbusBuffer_.begin(), modbusProtocolId );
+     TcpSetter( TcpField::Length, modbusBuffer_.begin(), modbusBuffer_.GetAduSize() - mbapSize + unitIdSize );
 }
 
 }

@@ -17,7 +17,20 @@ ModbusBufferRtuWrapper::ModbusBufferRtuWrapper( ModbusBuffer& modbusBuffer )
      }
 }
 
-void ModbusBufferRtuWrapper::UpdateCrc()
+CheckFrameResult ModbusBufferRtuWrapper::Check() const
+{
+     const auto begin = modbusBuffer_.begin();
+     auto end = modbusBuffer_.end() - crcSize;
+     uint16_t calculateCrc = CalculateCrc( begin, end );
+     uint16_t originCrc = U16FromBuffer( *( end + 1 ), *end );
+     if( calculateCrc != originCrc )
+     {
+          return CheckFrameResult::RtuInvalidCrc;
+     }
+     return CheckFrameResult::NoError;
+}
+
+void ModbusBufferRtuWrapper::Update()
 {
      const auto begin = modbusBuffer_.begin();
      auto end = modbusBuffer_.end() - crcSize;

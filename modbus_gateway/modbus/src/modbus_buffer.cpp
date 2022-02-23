@@ -1,5 +1,5 @@
-#include "modbus/modbus_buffer.h"
-#include "modbus/modbus_framing.h"
+#include <modbus/modbus_buffer.h>
+#include <modbus/modbus_framing.h>
 
 #include <sstream>
 
@@ -65,6 +65,12 @@ ModbusBuffer::ModbusBuffer( FrameType type )
           , aduSize_( GetAduMaxSize( type ) )
 {}
 
+ModbusBuffer::ModbusBuffer( ModbusBuffer&& other ) noexcept
+: type_( other.type_ )
+, buffer_( std::move( other.buffer_ ) )
+, aduSize_( other.aduSize_ )
+{}
+
 FrameType ModbusBuffer::GetType() const
 {
      return type_;
@@ -100,16 +106,14 @@ AduBuffer::const_iterator ModbusBuffer::cend() const
      return ModbusBuffer::begin() + aduSize_;
 }
 
-void ModbusBuffer::SetAduSize( size_t aduSize )
+bool ModbusBuffer::SetAduSize( size_t aduSize )
 {
-     if( aduSize > GetAduMaxSize( type_ ) )
+     if( aduSize < GetAduMinSize( type_ ) || GetAduMaxSize( type_ ) < aduSize )
      {
-          std::ostringstream os;
-          os << "invalid adu size: " << aduSize << " for type " << GetTypeName( type_ ) << ", max size "
-             << GetAduMaxSize( type_ );
-          throw std::logic_error( os.str() );
+          return false;
      }
      aduSize_ = aduSize;
+     return true;
 }
 
 size_t ModbusBuffer::GetAduSize() const
@@ -160,15 +164,6 @@ void ModbusBuffer::ConvertTo( FrameType toType )
                           buffer_.begin() + functionCodeASCIIPos,
                           pduSize );
           pduSize *= 2;
-
-          auto asciiBeginIt = buffer_.begin() + GetAduStart( FrameType::ASCII );
-          *asciiBeginIt = asciiStart;
-
-          auto asciiEndIt = asciiBeginIt + CalculateAduSize( FrameType::ASCII, pduSize ) - asciiEndSize;
-          const auto pair = U16ToBuffer( asciiEnd );
-          *asciiEndIt = pair.first;
-          ++asciiEndIt;
-          *asciiEndIt = pair.second;
      }
 
      // ASCII -> RTU
@@ -185,6 +180,5 @@ void ModbusBuffer::ConvertTo( FrameType toType )
      aduSize_ = CalculateAduSize( type_, pduSize );
      SetUnitId( unitId );
 }
-
 
 }

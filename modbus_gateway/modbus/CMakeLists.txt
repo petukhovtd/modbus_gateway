@@ -26,6 +26,7 @@ set(SOURCE
           src/modbus_buffer_tcp_wrapper.cpp
           src/modbus_buffer_ascii_wrapper.cpp
           src/modbus_buffer_rtu_wrapper.cpp
+          src/modbus_buffer_wrapper.cpp
           )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE})

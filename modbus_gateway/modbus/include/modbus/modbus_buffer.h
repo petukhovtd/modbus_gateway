@@ -1,7 +1,7 @@
-#ifndef MODBUS_GATEWAY_MODBUS_BUFFER_H
-#define MODBUS_GATEWAY_MODBUS_BUFFER_H
+#ifndef MODBUS_MODBUS_BUFFER_H
+#define MODBUS_MODBUS_BUFFER_H
 
-#include "modbus_types.h"
+#include <modbus/modbus_types.h>
 
 namespace modbus
 {
@@ -18,6 +18,8 @@ public:
      explicit ModbusBuffer( FrameType type );
 
      ModbusBuffer( ModbusBuffer& ) = delete;
+
+     ModbusBuffer( ModbusBuffer&& ) noexcept;
 
      /// @brief Получить тип фрейма
      /// @return
@@ -47,9 +49,9 @@ public:
      /// @return
      AduBuffer::const_iterator cend() const;
 
-     /// @brief Установить adu size, по умолчанию 0
-     /// @return
-     void SetAduSize( size_t aduSize );
+     /// @brief Установить adu size
+     /// @return false - размер не соответствует ограничениям на минимальный и максимальный
+     bool SetAduSize( size_t aduSize );
 
      /// @brief Получить adu size
      /// @return
@@ -74,7 +76,6 @@ public:
      /// @brief Конвертация фрема в другой формат
      /// TCP<->RTU изменяется только указатели на начало и конец буфера и размер
      /// ASCII<->[TCP,RTU] производит конвертацию, что может аллоцировать дополнительную память
-     /// записывает стартовый и конечный маркер
      /// !!! не обновляет и не проверяет контрольные суммы для RTU и ASCII фреймов
      /// @param[in] toType
      void ConvertTo( FrameType toType );
@@ -83,6 +84,32 @@ private:
      FrameType type_;
      AduBuffer buffer_;
      size_t aduSize_;
+};
+
+/// @brief Результат проверки фрейма
+enum class CheckFrameResult
+{
+     NoError = 0,
+     TcpInvalidProtocolId,
+     TcpInvalidLength,
+     RtuInvalidCrc,
+     AsciiInvalidStartTag,
+     AsciiInvalidLrc,
+     AsciiInvalidEndTag,
+};
+
+/// @brief Вспомогательная обертка со специфичными для каждого фрейма
+class IModbusBufferWrapper
+{
+public:
+     virtual ~IModbusBufferWrapper() = default;
+
+     /// @brief Проверка фрейма
+     /// @return
+     virtual CheckFrameResult Check() const = 0;
+
+     /// @brief Обновление специальный полей фрейма
+     virtual void Update() = 0;
 };
 
 }

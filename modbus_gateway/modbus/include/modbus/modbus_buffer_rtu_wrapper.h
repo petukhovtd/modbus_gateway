@@ -1,5 +1,5 @@
-#ifndef MODBUS_GATEWAY_MODBUS_BUFFER_RTU_WRAPPER_H
-#define MODBUS_GATEWAY_MODBUS_BUFFER_RTU_WRAPPER_H
+#ifndef MODBUS_MODBUS_BUFFER_RTU_WRAPPER_H
+#define MODBUS_MODBUS_BUFFER_RTU_WRAPPER_H
 
 #include <modbus/modbus_buffer.h>
 
@@ -7,7 +7,7 @@ namespace modbus
 {
 
 /// @brief Обертка RTU фрейма
-class ModbusBufferRtuWrapper
+class ModbusBufferRtuWrapper: public IModbusBufferWrapper
 {
 public:
      /// @brief Конструктор класса
@@ -15,8 +15,14 @@ public:
      /// @throw std::logic_error если фрейм не RTU типа
      explicit ModbusBufferRtuWrapper( ModbusBuffer& modbusBuffer );
 
-     /// @brief Обновить значение CRC
-     void UpdateCrc();
+     ~ModbusBufferRtuWrapper() override = default;
+
+     /// @brief Проверяет crc
+     /// @return
+     CheckFrameResult Check() const override;
+
+     /// @brief Обновляет crc
+     void Update() override;
 
 private:
      ModbusBuffer& modbusBuffer_;

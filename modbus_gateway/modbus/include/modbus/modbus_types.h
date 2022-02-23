@@ -1,5 +1,5 @@
-#ifndef MODBUS_GATEWAY_MODBUS_TYPES_H
-#define MODBUS_GATEWAY_MODBUS_TYPES_H
+#ifndef MODBUS_MODBUS_TYPES_H
+#define MODBUS_MODBUS_TYPES_H
 
 #include <memory>
 #include <vector>
@@ -19,6 +19,7 @@ enum FrameType
 static const size_t unitIdSize = 1;
 static const size_t functionCodeSize = 1;
 static const size_t crcSize = 2;
+static const size_t pduMinSize = functionCodeSize;
 
 static const size_t aduRtuMaxSize = 256; // 256 serial implementation limit
 
@@ -31,6 +32,7 @@ static const size_t dataMaxSize = pduMaxSize - functionCodeSize;
 static_assert( dataMaxSize == 252 );
 
 // Tcp
+static const uint16_t modbusProtocolId = 0;
 static const size_t transactionIdSize = 2;
 static const size_t protocolIdSize = 2;
 static const size_t lengthSize = 2;
@@ -117,6 +119,11 @@ size_t GetAduStart( FrameType type );
 /// @param[in] type
 /// @return
 size_t GetAduMaxSize( FrameType type );
+
+/// @brief Получить минимальный размер фарейма заданного типа
+/// @param[in] type
+/// @return
+size_t GetAduMinSize( FrameType type );
 
 /// @brief Получить тествое представление типа
 /// @param[in] type

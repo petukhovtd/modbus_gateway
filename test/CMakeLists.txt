@@ -1,5 +1,3 @@
-enable_testing()
-
 set(TEST_TARGET test)
 
 include_directories(
@@ -7,6 +5,8 @@ include_directories(
 )
 
 set(SOURCES_TEST
+          modbus_test_common.cpp
+
           modbus/test_modbus_types.cpp
           modbus/test_modbus_framing.cpp
           modbus/test_modbus_buffer.cpp

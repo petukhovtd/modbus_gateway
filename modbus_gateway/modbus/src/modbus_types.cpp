@@ -1,7 +1,6 @@
-#include "modbus/modbus_types.h"
+#include <modbus/modbus_types.h>
 
 #include <stdexcept>
-#include <array>
 
 namespace modbus
 {
@@ -30,6 +29,18 @@ size_t GetAduMaxSize( FrameType type )
           case RTU: return aduRtuMaxSize;
           case ASCII: return aduAsciiMaxSize;
           case TCP: return aduTcpMaxSize;
+          default:
+               throw std::logic_error( "unknown frame type" );
+     }
+}
+
+size_t GetAduMinSize( FrameType type )
+{
+     switch( type )
+     {
+          case RTU: return rtuOverhead + pduMinSize;
+          case ASCII: return asciiOverhead + pduMinSize * 2;
+          case TCP: return mbapSize + pduMinSize;
           default:
                throw std::logic_error( "unknown frame type" );
      }

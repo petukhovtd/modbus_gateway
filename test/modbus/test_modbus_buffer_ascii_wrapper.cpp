@@ -20,18 +20,59 @@ TEST( ModbusBufferAsciiWrapper, Create )
      }
 }
 
-TEST( ModbusBufferAsciiWrapper, UpdateLrc )
+TEST( ModbusBufferAsciiWrapper, Check )
 {
-     static const AduBuffer asciiInput = { asciiStart, '0', '1', '0', 'A', 'B', 'C', 0, 0, asciiEnd >> 8u,
-                                           asciiEnd & 0xFFu };
-     static const AduBuffer asciiOutput = { asciiStart, '0', '1', '0', 'A', 'B', 'C', 'A', '9', asciiEnd >> 8u,
-                                            asciiEnd & 0xFFu };
-     ModbusBuffer modbusBuffer( FrameType::ASCII );
-     std::copy( asciiInput.begin(), asciiInput.end(), modbusBuffer.begin() );
-     modbusBuffer.SetAduSize( asciiInput.size() );
+     {
+          static const AduBuffer asciiFrame = { asciiStart,
+                                                '0', '1', '0', 'A', 'B', 'C', 'A', '9',
+                                                asciiEnd >> 8u, asciiEnd & 0xFFu };
+          ModbusBuffer modbusBuffer = test::MakeModbusBuffer( asciiFrame, FrameType::ASCII );
+          EXPECT_EQ( ModbusBufferAsciiWrapper( modbusBuffer ).Check(), CheckFrameResult::NoError );
+     }
+     {
+          static const AduBuffer asciiFrame = { asciiStart / 2,
+                                                '0', '1', '0', 'A', 'B', 'C', 'A', '9',
+                                                asciiEnd >> 8u, asciiEnd & 0xFFu };
+          ModbusBuffer modbusBuffer = test::MakeModbusBuffer( asciiFrame, FrameType::ASCII );
+          EXPECT_EQ( ModbusBufferAsciiWrapper( modbusBuffer ).Check(), CheckFrameResult::AsciiInvalidStartTag );
+     }
+     {
+          static const AduBuffer asciiFrame = { asciiStart,
+                                                '0', '1', '0', 'A', 'B', 'C', 'A', '9',
+                                                asciiEnd >> 7u, asciiEnd & 0xFFu };
+          ModbusBuffer modbusBuffer = test::MakeModbusBuffer( asciiFrame, FrameType::ASCII );
+          EXPECT_EQ( ModbusBufferAsciiWrapper( modbusBuffer ).Check(), CheckFrameResult::AsciiInvalidEndTag );
+     }
+     {
+          static const AduBuffer asciiFrame = { asciiStart,
+                                                '0', '1', '0', 'A', 'B', 'C', 'A', '9',
+                                                asciiEnd >> 8u, asciiEnd & 0xF0u };
+          ModbusBuffer modbusBuffer = test::MakeModbusBuffer( asciiFrame, FrameType::ASCII );
+          EXPECT_EQ( ModbusBufferAsciiWrapper( modbusBuffer ).Check(), CheckFrameResult::AsciiInvalidEndTag );
+     }
+     {
+          static const AduBuffer asciiFrame = { asciiStart,
+                                                '0', '1', '0', 'A', 'B', 'C', 0, 0,
+                                                asciiEnd >> 8u, asciiEnd & 0xFFu };
+          ModbusBuffer modbusBuffer = test::MakeModbusBuffer( asciiFrame, FrameType::ASCII );
+          EXPECT_EQ( ModbusBufferAsciiWrapper( modbusBuffer ).Check(), CheckFrameResult::AsciiInvalidLrc );
+     }
+}
+
+TEST( ModbusBufferAsciiWrapper, Update )
+{
+     static const AduBuffer asciiFrame = { 0,
+                                           '0', '1', '0', 'A', 'B', 'C', 0, 0,
+                                           0, 0 };
+     static const AduBuffer newAsciiFrame = { asciiStart,
+                                              '0', '1', '0', 'A', 'B', 'C', 'A', '9',
+                                              asciiEnd >> 8u, asciiEnd & 0xFFu };
+
+     ModbusBuffer modbusBuffer = test::MakeModbusBuffer( asciiFrame, FrameType::ASCII );
 
      ModbusBufferAsciiWrapper modbusBufferAsciiWrapper( modbusBuffer );
-     modbusBufferAsciiWrapper.UpdateLrc();
-     EXPECT_TRUE( test::Compare( asciiOutput.begin(), asciiOutput.end(), modbusBuffer.cbegin(), modbusBuffer.cend() ) );
+     modbusBufferAsciiWrapper.Update();
+     EXPECT_TRUE( test::Compare( newAsciiFrame.cbegin(), newAsciiFrame.cend(),
+                                 modbusBuffer.cbegin(), modbusBuffer.cend() ) );
 }
 

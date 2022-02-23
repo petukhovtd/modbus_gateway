@@ -20,15 +20,30 @@ TEST( ModbusBufferRtuWrapper, Create )
      }
 }
 
-TEST( ModbusBufferRtuWrapper, UpdateLrc )
+TEST( ModbusBufferRtuWrapper, Check )
 {
-     static const AduBuffer rtuInput = { 0x1, 0x6, 0xDF, 0, 0 };
-     static const AduBuffer rtuOutput = { 0x1, 0x6, 0xDF, 0x62, 0x38 };
-     ModbusBuffer modbusBuffer( FrameType::RTU );
-     std::copy( rtuInput.begin(), rtuInput.end(), modbusBuffer.begin() );
-     modbusBuffer.SetAduSize( rtuInput.size() );
+     {
+          static const AduBuffer rtuFrame = { 0x1, 0x6, 0xDF, 0x62, 0x38 };
+          ModbusBuffer modbusBuffer = test::MakeModbusBuffer( rtuFrame, FrameType::RTU );
+          EXPECT_EQ( ModbusBufferRtuWrapper( modbusBuffer ).Check(), CheckFrameResult::NoError );
+     }
+     {
+          static const AduBuffer rtuFrame = { 0x1, 0x6, 0xDF, 0x12, 0x34 };
+          ModbusBuffer modbusBuffer = test::MakeModbusBuffer( rtuFrame, FrameType::RTU );
+          EXPECT_EQ( ModbusBufferRtuWrapper( modbusBuffer ).Check(), CheckFrameResult::RtuInvalidCrc );
+     }
+}
 
-     ModbusBufferRtuWrapper modbusBufferRtuWrapper( modbusBuffer );
-     modbusBufferRtuWrapper.UpdateCrc();
-     EXPECT_TRUE( test::Compare( rtuOutput.begin(), rtuOutput.end(), modbusBuffer.cbegin(), modbusBuffer.cend() ) );
+TEST( ModbusBufferRtuWrapper, Update )
+{
+     static const AduBuffer rtuFrame = { 0x1, 0x6, 0xDF, 0, 0 };
+     static const AduBuffer newRtuFrame = { 0x1, 0x6, 0xDF, 0x62, 0x38 };
+
+     ModbusBuffer modbusBuffer( FrameType::RTU );
+     std::copy( rtuFrame.begin(), rtuFrame.end(), modbusBuffer.begin() );
+     modbusBuffer.SetAduSize( rtuFrame.size() );
+
+     ModbusBufferRtuWrapper( modbusBuffer ).Update();
+     EXPECT_TRUE( test::Compare( newRtuFrame.begin(), newRtuFrame.end(),
+                                 modbusBuffer.cbegin(), modbusBuffer.cend() ) );
 }
