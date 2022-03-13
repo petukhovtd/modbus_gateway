@@ -23,10 +23,10 @@ TEST( ModbusBufferTcpWrapper, Create )
 TEST( ModbusBufferTcpWrapper, TransactionId )
 {
      static const AduBuffer tcpFrame = { 0x12, 0x34, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4 };
-     static const uint16_t originId = 0x1234;
+     static const TransactionId originId = 0x1234;
 
      static const AduBuffer newTcpFrame = { 0x56, 0x78, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4 };
-     static const uint16_t newId = 0x5678;
+     static const TransactionId newId = 0x5678;
 
      ModbusBuffer modbusBuffer = test::MakeModbusBuffer( tcpFrame, FrameType::TCP );
 
@@ -42,7 +42,7 @@ TEST( ModbusBufferTcpWrapper, TransactionId )
 TEST( ModbusBufferTcpWrapper, ProtocolId )
 {
      static const AduBuffer tcpFrame = { 0x12, 0x34, 0x9A, 0xBD, 0x0, 0x3, 0x1, 0x3, 0x4 };
-     static const uint16_t originProtocolId = 0x9ABD;
+     static const ProtocolId originProtocolId = 0x9ABD;
 
      ModbusBuffer modbusBuffer = test::MakeModbusBuffer( tcpFrame, FrameType::TCP );
 
@@ -53,7 +53,7 @@ TEST( ModbusBufferTcpWrapper, ProtocolId )
 TEST( ModbusBufferTcpWrapper, LengthId )
 {
      static const AduBuffer tcpFrame = { 0x12, 0x34, 0x9A, 0xBD, 0x0, 0x3, 0x1, 0x3, 0x4 };
-     static const uint16_t originLength = 0x3;
+     static const Length originLength = 0x3;
 
      ModbusBuffer modbusBuffer = test::MakeModbusBuffer( tcpFrame, FrameType::TCP );
 

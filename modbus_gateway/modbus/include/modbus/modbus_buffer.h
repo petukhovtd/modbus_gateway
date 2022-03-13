@@ -59,19 +59,19 @@ public:
 
      /// @brief Получить unit id
      /// @return
-     uint8_t GetUnitId() const;
+     UnitId GetUnitId() const;
 
      /// @brief Установить unit id
      /// @param id
-     void SetUnitId( uint8_t id );
+     void SetUnitId( UnitId id );
 
      /// @brief Получить fc
      /// @return
-     uint8_t GetFunctionCode() const;
+     FunctionCode GetFunctionCode() const;
 
      /// @brief Установить fc
      /// @param fc
-     void SetFunctionCode( uint8_t fc );
+     void SetFunctionCode( FunctionCode fc );
 
      /// @brief Конвертация фрема в другой формат
      /// TCP<->RTU изменяется только указатели на начало и конец буфера и размер

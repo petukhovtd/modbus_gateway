@@ -19,19 +19,19 @@ public:
 
      /// @brief Получить номер транзакции
      /// @return
-     uint16_t GetTransactionId() const;
+     TransactionId GetTransactionId() const;
 
      /// @brief Установить номер транзакции
      /// @param[in] trId
-     void SetTransactionId( uint16_t trId );
+     void SetTransactionId( TransactionId trId );
 
      /// @brief Получить номер протокола
      /// @return
-     uint16_t GetProtocolId() const;
+     ProtocolId GetProtocolId() const;
 
      /// @brief Получить длину фрейма
      /// @return
-     uint16_t GetLength() const;
+     Length GetLength() const;
 
      /// @brief Проверка номера протокола и длины
      /// @return

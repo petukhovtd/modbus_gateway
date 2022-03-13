@@ -16,8 +16,11 @@ enum FrameType
 };
 
 // Rtu
-static const size_t unitIdSize = 1;
-static const size_t functionCodeSize = 1;
+using UnitId = uint8_t;
+using FunctionCode = uint8_t ;
+
+static const size_t unitIdSize = sizeof( UnitId );
+static const size_t functionCodeSize = sizeof( FunctionCode );
 static const size_t crcSize = 2;
 static const size_t pduMinSize = functionCodeSize;
 
@@ -32,10 +35,14 @@ static const size_t dataMaxSize = pduMaxSize - functionCodeSize;
 static_assert( dataMaxSize == 252 );
 
 // Tcp
-static const uint16_t modbusProtocolId = 0;
-static const size_t transactionIdSize = 2;
-static const size_t protocolIdSize = 2;
-static const size_t lengthSize = 2;
+using TransactionId = uint16_t;
+using ProtocolId = uint16_t;
+using Length = uint16_t;
+
+static const ProtocolId modbusProtocolId = 0;
+static const size_t transactionIdSize = sizeof( TransactionId );
+static const size_t protocolIdSize = sizeof( ProtocolId );
+static const size_t lengthSize = sizeof( Length );
 
 static const size_t mbapSize = transactionIdSize + protocolIdSize + lengthSize + unitIdSize;
 static_assert( mbapSize == 7 );

@@ -20,7 +20,7 @@ class TcpServer
      using TcpClientPtr = std::shared_ptr< ModbusTcpSlave >;
      using ClientDb = std::unordered_map< exchange::ActorId, TcpClientPtr >;
 public:
-     explicit TcpServer( ContextPtr  context, asio::ip::port_type port );
+     explicit TcpServer( ContextPtr  context, asio::ip::port_type port, TimeoutMs clientTimeout, const RouterPtr& router );
 
      void Receive( const exchange::MessagePtr& message ) override;
 
@@ -38,6 +38,8 @@ private:
 private:
      ContextPtr context_;
      asio::ip::tcp::acceptor acceptor_;
+     TimeoutMs clientTimeout_;
+     RouterPtr router_;
      std::mutex mutex_;
      ClientDb clientDb_;
 };

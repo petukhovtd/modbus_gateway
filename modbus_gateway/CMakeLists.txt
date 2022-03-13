@@ -6,6 +6,7 @@ set(MODBUS_GATEWAY_SOURCE
           tcp_server.cpp
           modbus_tcp_slave.cpp
           messages/client_disconnect_message.cpp
+          messages/modbus_message.cpp
 )
 
 add_executable(${PROJECT_NAME} ${MODBUS_GATEWAY_SOURCE})
@@ -13,8 +14,6 @@ add_executable(${PROJECT_NAME} ${MODBUS_GATEWAY_SOURCE})
 target_include_directories(${PROJECT_NAME} PRIVATE
           .
 )
-
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 
 target_compile_options(${PROJECT_NAME} PRIVATE
           -Wall

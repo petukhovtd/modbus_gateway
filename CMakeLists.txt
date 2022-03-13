@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.13)
 project(modbus_gateway)
 
+set(CMAKE_CXX_STANDARD 17)
+
 include_directories(
           contrib/asio/asio/include
           contrib/exchange/include

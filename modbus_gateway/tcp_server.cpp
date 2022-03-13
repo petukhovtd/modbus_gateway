@@ -9,10 +9,15 @@ using namespace asio;
 namespace modbus_gateway
 {
 
-TcpServer::TcpServer( ContextPtr context, ip::port_type port )
+TcpServer::TcpServer( ContextPtr context, ip::port_type port, TimeoutMs clientTimeout, const RouterPtr& router )
           : context_( std::move( context ) )
           , acceptor_( *context_, ip::tcp::endpoint( ip::address_v4::any(), port ) )
-{}
+          , clientTimeout_( clientTimeout )
+          , router_( router )
+{
+     assert( context_ );
+     assert( router_ );
+}
 
 void TcpServer::Receive( const exchange::MessagePtr& message )
 {
@@ -68,7 +73,7 @@ void TcpServer::AcceptTask()
           }
           FMT_LOG_INFO( "TcpServer connect from {}:{}", socket->remote_endpoint().address().to_string(),
                         socket->remote_endpoint().port() )
-          auto tcpClient = ModbusTcpSlave::Create( socket, self->GetId().value() );
+          auto tcpClient = ModbusTcpSlave::Create( self->GetId().value(), socket, self->clientTimeout_, self->router_ );
           auto clientId = exchange::Exchange::Insert( tcpClient );
           {
                std::unique_lock< std::mutex > lock( self->mutex_ );
