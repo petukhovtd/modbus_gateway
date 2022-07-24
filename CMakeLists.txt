@@ -3,6 +3,8 @@ project(modbus_gateway)
 
 set(CMAKE_CXX_STANDARD 17)
 
+add_compile_definitions(ASIO_NO_DEPRECATED)
+
 include_directories(
           contrib/asio/asio/include
           contrib/exchange/include

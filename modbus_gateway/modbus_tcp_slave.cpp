@@ -7,22 +7,23 @@
 
 #include <modbus/modbus_buffer.h>
 #include <modbus/modbus_buffer_tcp_wrapper.h>
+#include <zconf.h>
 
 using namespace asio;
 
 namespace modbus_gateway
 {
 
-ModbusTcpSlave::ModbusTcpSlave( exchange::ActorId serverId, SocketPtr socket, unsigned int timeoutMs, const RouterPtr& router )
+ModbusTcpSlave::ModbusTcpSlave( exchange::ActorId serverId, TcpSocketPtr socket, std::chrono::milliseconds requestTimeout, const RouterPtr& router )
 : serverId_( serverId )
 , socket_( std::move( socket ) )
-, waitTimer_( std::make_unique< WaitTimerPtr::element_type >( socket_->get_executor(), std::chrono::milliseconds( timeoutMs ) ) )
+, requestTmeout_( requestTimeout )
+, requestTimer_( std::make_unique< WaitTimerPtr::element_type >( socket_->get_executor() ) )
 , router_( router )
-, infoMutex_()
-, lastRequestInfo_( std::nullopt )
+, syncRequestInfo_( std::nullopt )
 {
      assert( socket_ );
-     assert( waitTimer_ );
+     assert( requestTimer_ );
      assert( router_ );
 }
 
@@ -36,7 +37,7 @@ void ModbusTcpSlave::Receive( const exchange::MessagePtr& message )
           SyncWriteMessage( *targetMessage );
           return;
      }
-     FMT_LOG_TRACE( "TcpClient::Receive unsupport message" )
+     FMT_LOG_TRACE( "TcpClient::Receive unsupported message" )
 }
 
 void ModbusTcpSlave::Start()
@@ -51,14 +52,8 @@ void ModbusTcpSlave::Start()
 void ModbusTcpSlave::Stop()
 {
      error_code ec;
-     waitTimer_->cancel( ec );
+     requestTimer_->cancel();
      socket_->cancel( ec );
-     socket_->close( ec );
-}
-
-ModbusTcpSlave::~ModbusTcpSlave()
-{
-     Stop();
 }
 
 ModbusMessagePtr ModbusTcpSlave::MakeRequest( const ModbusBufferPtr& modbusBuffer, size_t size, exchange::ActorId masterId )
@@ -68,7 +63,7 @@ ModbusMessagePtr ModbusTcpSlave::MakeRequest( const ModbusBufferPtr& modbusBuffe
           FMT_LOG_ERROR( "TcpClient: invalid adu size" )
           return nullptr;
      }
-     FMT_LOG_TRACE( "TcpClient: read request modbus buffer: [{:X}]", fmt::join( *modbusBuffer, " " ) )
+     FMT_LOG_TRACE( "TcpClient: request: [{:X}]", fmt::join( *modbusBuffer, " " ) )
      modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper( *modbusBuffer );
      modbus::CheckFrameResult checkFrameResult = modbusBufferTcpWrapper.Check();
      if( checkFrameResult != modbus::CheckFrameResult::NoError )
@@ -76,6 +71,17 @@ ModbusMessagePtr ModbusTcpSlave::MakeRequest( const ModbusBufferPtr& modbusBuffe
           FMT_LOG_ERROR( "TcpClient: invalid tcp frame {}", checkFrameResult )
           return nullptr;
      }
+
+     FMT_LOG_DEBUG( "TcpClient: request: transaction id {}, "
+                    "protocol id {}, "
+                    "length {}, "
+                    "unit id {}, "
+                    "function code {}",
+                    modbusBufferTcpWrapper.GetTransactionId(),
+                    modbusBufferTcpWrapper.GetProtocolId(),
+                    modbusBufferTcpWrapper.GetLength(),
+                    modbusBuffer->GetUnitId(),
+                    modbusBuffer->GetFunctionCode() )
 
      ModbusMessageInfo modbusMessageInfo( modbusBufferTcpWrapper.GetTransactionId(), modbusBuffer->GetUnitId(), masterId );
      return std::make_shared< ModbusMessagePtr::element_type >( modbusMessageInfo, modbusBuffer );
@@ -121,13 +127,17 @@ void ModbusTcpSlave::StartReadTask()
                     }
 
                     {
-                         std::scoped_lock< std::mutex > lock( self->infoMutex_ );
-                         self->lastRequestInfo_ = message->GetModbusMessageInfo();
+                         auto access = self->syncRequestInfo_.GetAccess();
+                         access.ref = message->GetModbusMessageInfo();
                     }
                     self->StartTimeoutTask();
-                    const exchange::ActorId slaveId = self->router_->Route( self->lastRequestInfo_->unitId );
+                    const exchange::ActorId slaveId = self->router_->Route( message->GetModbusMessageInfo().unitId );
+                    FMT_LOG_TRACE( "TcpClient: unit id {} route to slave id {}", message->GetModbusMessageInfo().unitId, slaveId )
                     const auto res = exchange::Exchange::Send( slaveId, message );
-                    FMT_LOG_DEBUG( "TcpClient: send request to {} is {}", slaveId, res )
+                    if( !res )
+                    {
+                         FMT_LOG_ERROR( "TcpClient: route to slave id {} failed", slaveId )
+                    }
                });
 }
 
@@ -135,8 +145,9 @@ void ModbusTcpSlave::StartTimeoutTask()
 {
      FMT_LOG_TRACE( "TcpClient::StartTimeoutTask" )
      Weak weak = GetWeak();
-     waitTimer_->async_wait(
-     [ weak ]( const error_code ec )
+     requestTimer_->expires_after( requestTmeout_ );
+     FMT_LOG_TRACE( "TcpClient: timeout {}ms", requestTmeout_.count() )
+     requestTimer_->async_wait( [ weak ]( const error_code ec )
      {
           Ptr self = weak.lock();
           if( !self )
@@ -151,15 +162,16 @@ void ModbusTcpSlave::StartTimeoutTask()
           }
 
           {
-               std::scoped_lock< std::mutex > lock( self->infoMutex_ );
-               if( !self->lastRequestInfo_.has_value() )
+               auto access = self->syncRequestInfo_.GetAccess();
+               ModbusMessageInfoOpt& modbusMessageInfoOpt = access.ref;
+               if( !modbusMessageInfoOpt.has_value() )
                {
                     FMT_LOG_ERROR( "TcpClient::Timer empty request info" )
                     return;
                }
                FMT_LOG_INFO( "TcpClient::Timer achieve deadline. Message id {}, unit id {}",
-                             self->lastRequestInfo_->messageId, self->lastRequestInfo_->unitId )
-               self->lastRequestInfo_.reset();
+                             modbusMessageInfoOpt->messageId, modbusMessageInfoOpt->unitId )
+               modbusMessageInfoOpt.reset();
           }
           self->StartReadTask();
      } );
@@ -169,6 +181,7 @@ ModbusBufferPtr ModbusTcpSlave::MakeResponse( const ModbusMessage& modbusMessage
 {
      const ModbusMessageInfo& messageInfo = modbusMessage.GetModbusMessageInfo();
      ModbusBufferPtr modbusBuffer = modbusMessage.GetModbusBuffer();
+
      if( !modbusBuffer )
      {
           FMT_LOG_ERROR( "TcpClient: modbus buffer is null. Response message id {}, unit id {}",
@@ -176,15 +189,26 @@ ModbusBufferPtr ModbusTcpSlave::MakeResponse( const ModbusMessage& modbusMessage
           return modbusBuffer;
      }
 
+     FMT_LOG_TRACE( "TcpClient: response: [{:X}]", fmt::join( *modbusBuffer, " " ) )
+
+     if( modbusBuffer->GetUnitId() != messageInfo.unitId )
      {
-          std::scoped_lock< std::mutex > lock( infoMutex_ );
-          if( !lastRequestInfo_.has_value() )
+          FMT_LOG_ERROR( "TcpClient: response info and buffer unit id don't equal. "
+                         "Info message id {}, unit id {}, buffer unit id {}",
+                         messageInfo.messageId, messageInfo.unitId, modbusBuffer->GetUnitId() )
+          return nullptr;
+     }
+
+     {
+          auto access = syncRequestInfo_.GetAccess();
+          ModbusMessageInfoOpt& modbusMessageInfoOpt = access.ref;
+          if( !modbusMessageInfoOpt.has_value() )
           {
                FMT_LOG_ERROR( "TcpClient: empty request info. Response message id {}, unit id {}",
                               messageInfo.messageId, messageInfo.unitId )
                return nullptr;
           }
-          const ModbusMessageInfo& lastInfo = lastRequestInfo_.value();
+          const ModbusMessageInfo& lastInfo = modbusMessageInfoOpt.value();
           if( lastInfo != messageInfo )
           {
                FMT_LOG_ERROR( "TcpClient: request info don't equal response info. "
@@ -194,21 +218,25 @@ ModbusBufferPtr ModbusTcpSlave::MakeResponse( const ModbusMessage& modbusMessage
                               messageInfo.messageId, messageInfo.unitId, messageInfo.masterId )
                return nullptr;
           }
-          lastRequestInfo_.reset();
-     }
-
-     if( modbusBuffer->GetUnitId() != messageInfo.unitId )
-     {
-          FMT_LOG_ERROR( "TcpClient request and response unit id don't equal. "
-                         "Message id {}, unit id {}, response unit id {}",
-                         messageInfo.messageId, messageInfo.unitId, modbusBuffer->GetUnitId() )
-          return nullptr;
+          modbusMessageInfoOpt.reset();
      }
 
      modbusBuffer->ConvertTo( modbus::FrameType::TCP );
      modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper( *modbusBuffer );
      modbusBufferTcpWrapper.Update();
      modbusBufferTcpWrapper.SetTransactionId( messageInfo.messageId );
+
+
+     FMT_LOG_DEBUG( "TcpClient: tcp response: transaction id {}, "
+                    "protocol id {}, "
+                    "length {}, "
+                    "unit id {}, "
+                    "function code {}",
+                    modbusBufferTcpWrapper.GetTransactionId(),
+                    modbusBufferTcpWrapper.GetProtocolId(),
+                    modbusBufferTcpWrapper.GetLength(),
+                    modbusBuffer->GetUnitId(),
+                    modbusBuffer->GetFunctionCode() )
 
      return modbusBuffer;
 }
@@ -222,8 +250,7 @@ void ModbusTcpSlave::SyncWriteMessage( const ModbusMessage& modbusMessage )
           return;
      }
 
-     FMT_LOG_TRACE( "TcpClient: write response modbus buffer: [{:X}]", fmt::join( *modbusBuffer, " " ) )
-     waitTimer_->cancel();
+     requestTimer_->cancel();
 
      error_code ec;
      size_t bytes = socket_->write_some( buffer( modbusBuffer->begin().operator->(), modbusBuffer->GetAduSize() ), ec );

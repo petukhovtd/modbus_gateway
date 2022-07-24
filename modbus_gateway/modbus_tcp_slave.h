@@ -4,22 +4,25 @@
 #include <exchange/actor_helper.h>
 #include <messages/modbus_message.h>
 #include <types.h>
+#include <common/synchronized.h>
 
 namespace modbus_gateway
 {
 
 class ModbusTcpSlave: public exchange::ActorHelper< ModbusTcpSlave >
 {
+     using ModbusMessageInfoOpt =  std::optional< ModbusMessageInfo >;
+
 public:
-     explicit ModbusTcpSlave( exchange::ActorId serverId, SocketPtr socket, unsigned int timeoutMs, const RouterPtr& router );
+     explicit ModbusTcpSlave( exchange::ActorId serverId, TcpSocketPtr socket, std::chrono::milliseconds requestTimeout, const RouterPtr& router );
+
+     ~ModbusTcpSlave() override = default;
 
      void Receive( const exchange::MessagePtr& ) override;
 
      void Start();
 
      void Stop();
-
-     ~ModbusTcpSlave() override;
 
 private:
      static ModbusMessagePtr MakeRequest( const ModbusBufferPtr& modbusBuffer, size_t size, exchange::ActorId masterId );
@@ -34,12 +37,11 @@ private:
 
 private:
      exchange::ActorId serverId_;
-     SocketPtr socket_;
-     WaitTimerPtr waitTimer_;
+     TcpSocketPtr socket_;
+     const std::chrono::milliseconds requestTmeout_;
+     WaitTimerPtr requestTimer_;
      RouterPtr router_;
-
-     std::mutex infoMutex_;
-     std::optional< ModbusMessageInfo > lastRequestInfo_;
+     Synchronized< ModbusMessageInfoOpt > syncRequestInfo_;
 };
 
 }
