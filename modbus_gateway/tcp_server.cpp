@@ -10,12 +10,11 @@ namespace modbus_gateway
 {
 
 TcpServer::TcpServer( ContextPtr context, ip::port_type port, TimeoutMs clientTimeout, const RouterPtr& router )
-          : context_( std::move( context ) )
-          , acceptor_( *context_, ip::tcp::endpoint( ip::address_v4::any(), port ) )
+          : acceptor_( std::make_unique< TcpAcceptorPtr::element_type >( *context, ip::tcp::endpoint( ip::address_v4::any(), port ) ) )
           , clientTimeout_( clientTimeout )
           , router_( router )
 {
-     assert( context_ );
+     assert( acceptor_ );
      assert( router_ );
 }
 
@@ -38,8 +37,8 @@ void TcpServer::Start()
 void TcpServer::Stop()
 {
      error_code ec;
-     acceptor_.cancel( ec );
-     acceptor_.close( ec );
+     acceptor_->cancel( ec );
+     acceptor_->close( ec );
      {
           std::unique_lock< std::mutex > lock( mutex_ );
           for( const auto&[id, client]: clientDb_ )
@@ -56,9 +55,9 @@ TcpServer::~TcpServer()
 
 void TcpServer::AcceptTask()
 {
-     SocketPtr socket = std::make_shared< SocketPtr::element_type >( *context_ );
+     TcpSocketPtr socket = std::make_shared< TcpSocketPtr::element_type >( acceptor_->get_executor() );
      Weak weak = GetWeak();
-     acceptor_.async_accept( *socket, [ weak, socket ]( const error_code& ec )
+     acceptor_->async_accept( *socket, [ weak, socket ]( const error_code& ec )
      {
           if( ec )
           {

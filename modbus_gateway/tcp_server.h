@@ -36,8 +36,7 @@ private:
      void ClientDisconnect( exchange::ActorId clientId );
 
 private:
-     ContextPtr context_;
-     asio::ip::tcp::acceptor acceptor_;
+     TcpAcceptorPtr acceptor_;
      TimeoutMs clientTimeout_;
      RouterPtr router_;
      std::mutex mutex_;

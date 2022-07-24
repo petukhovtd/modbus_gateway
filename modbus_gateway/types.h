@@ -10,7 +10,9 @@ namespace modbus_gateway
 {
 
 using ContextPtr = std::shared_ptr< asio::io_context >;
-using SocketPtr = std::shared_ptr< asio::ip::tcp::socket >;
+using TcpSocketPtr = std::shared_ptr< asio::ip::tcp::socket >;
+using TcpSocketUPtr = std::unique_ptr< asio::ip::tcp::socket >;
+using TcpAcceptorPtr = std::unique_ptr< asio::ip::tcp::acceptor >;
 using WaitTimerPtr = std::unique_ptr< asio::basic_waitable_timer< std::chrono::steady_clock > >;
 
 using ModbusBufferPtr = std::shared_ptr< modbus::ModbusBuffer >;
