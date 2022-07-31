@@ -1,5 +1,5 @@
-#ifndef MODBUS_GATEWAY_MODBUS_TCP_SLAVE_H
-#define MODBUS_GATEWAY_MODBUS_TCP_SLAVE_H
+#ifndef MODBUS_GATEWAY_MODBUS_TCP_CONNECTION_H
+#define MODBUS_GATEWAY_MODBUS_TCP_CONNECTION_H
 
 #include <exchange/actor_helper.h>
 #include <messages/modbus_message.h>
@@ -9,14 +9,14 @@
 namespace modbus_gateway
 {
 
-class ModbusTcpSlave: public exchange::ActorHelper< ModbusTcpSlave >
+class ModbusTcpConnection final: public exchange::ActorHelper< ModbusTcpConnection >
 {
      using ModbusMessageInfoOpt =  std::optional< ModbusMessageInfo >;
 
 public:
-     explicit ModbusTcpSlave( exchange::ActorId serverId, TcpSocketPtr socket, std::chrono::milliseconds requestTimeout, const RouterPtr& router );
+     explicit ModbusTcpConnection( exchange::ActorId serverId, TcpSocketPtr socket, RouterPtr  router );
 
-     ~ModbusTcpSlave() override = default;
+     ~ModbusTcpConnection() override = default;
 
      void Receive( const exchange::MessagePtr& ) override;
 
@@ -29,17 +29,13 @@ private:
 
      void StartReadTask();
 
-     void StartTimeoutTask();
+     ModbusBufferPtr MakeResponse( const ModbusMessagePtr& modbusMessage );
 
-     ModbusBufferPtr MakeResponse( const ModbusMessage& modbusMessage );
-
-     void SyncWriteMessage( const ModbusMessage& modbusMessage );
+     void StartWriteMessage( const ModbusMessagePtr& modbusMessage );
 
 private:
      exchange::ActorId serverId_;
      TcpSocketPtr socket_;
-     const std::chrono::milliseconds requestTmeout_;
-     WaitTimerPtr requestTimer_;
      RouterPtr router_;
      Synchronized< ModbusMessageInfoOpt > syncRequestInfo_;
 };

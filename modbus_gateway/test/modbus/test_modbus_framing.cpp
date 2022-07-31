@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <modbus_test_common.h>
+#include <test/modbus_common.h>
 #include <modbus/modbus_framing.h>
 
 using namespace modbus;

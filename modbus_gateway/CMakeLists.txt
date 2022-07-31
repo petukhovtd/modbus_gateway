@@ -2,18 +2,20 @@ include_directories(modbus/include)
 
 set(MODBUS_GATEWAY_SOURCE
           common/fmt_logger.cpp
-          main.cpp
-          tcp_server.cpp
-          modbus_tcp_slave.cpp
+
           messages/client_disconnect_message.cpp
           messages/modbus_message.cpp
+
+          modbus_message_info.cpp
+
+          modbus_tcp_server.cpp
+          modbus_tcp_connection.cpp
 )
 
-add_executable(${PROJECT_NAME} ${MODBUS_GATEWAY_SOURCE})
+add_executable(${PROJECT_NAME} ${MODBUS_GATEWAY_SOURCE} main.cpp)
+add_library(lib${PROJECT_NAME} STATIC ${MODBUS_GATEWAY_SOURCE})
 
-target_include_directories(${PROJECT_NAME} PRIVATE
-          .
-)
+include_directories(${PROJECT_NAME} PRIVATE .)
 
 target_compile_options(${PROJECT_NAME} PRIVATE
           -Wall
@@ -26,13 +28,9 @@ target_compile_options(${PROJECT_NAME} PRIVATE
           -Wno-uninitialized
 )
 
-target_link_libraries(
-          ${PROJECT_NAME}
-          pthread
-          exchange
-          spdlog
-          modbus
-)
+set(LIBS pthread exchange spdlog modbus lib${PROJECT_NAME})
+
+target_link_libraries(${PROJECT_NAME} ${LIBS})
 
 add_subdirectory(modbus)
 add_subdirectory(test)

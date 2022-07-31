@@ -1,11 +1,11 @@
-#include <modbus_test_common.h>
+#include "modbus_common.h"
 
-namespace modbus::test
+namespace test
 {
 
-modbus::ModbusBuffer MakeModbusBuffer( const AduBuffer& frame, FrameType type )
+modbus::ModbusBuffer MakeModbusBuffer( const modbus::AduBuffer& frame, modbus::FrameType type )
 {
-     ModbusBuffer modbusBuffer( type );
+     modbus::ModbusBuffer modbusBuffer( type );
      std::copy( frame.begin(), frame.end(), modbusBuffer.begin() );
      if( !modbusBuffer.SetAduSize( frame.size() ) )
      {
