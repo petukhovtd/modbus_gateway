@@ -1,11 +1,11 @@
-#ifndef MODBUS_GATEWAY_TCP_SERVER_H
-#define MODBUS_GATEWAY_TCP_SERVER_H
+#ifndef MODBUS_GATEWAY_MODBUS_TCP_SERVER_H
+#define MODBUS_GATEWAY_MODBUS_TCP_SERVER_H
 
 #include <exchange/actor_helper.h>
 #include <asio.hpp>
 
 #include <types.h>
-#include <modbus_tcp_slave.h>
+#include <modbus_tcp_connection.h>
 
 #include <unordered_map>
 #include <memory>
@@ -14,13 +14,13 @@
 namespace modbus_gateway
 {
 
-class TcpServer
-          : public exchange::ActorHelper< TcpServer >
+class ModbusTcpServer final
+          : public exchange::ActorHelper< ModbusTcpServer >
 {
-     using TcpClientPtr = std::shared_ptr< ModbusTcpSlave >;
+     using TcpClientPtr = std::shared_ptr< ModbusTcpConnection >;
      using ClientDb = std::unordered_map< exchange::ActorId, TcpClientPtr >;
 public:
-     explicit TcpServer( ContextPtr  context, asio::ip::port_type port, TimeoutMs clientTimeout, const RouterPtr& router );
+     ModbusTcpServer( const ContextPtr& context, const asio::ip::address& addr, asio::ip::port_type port, RouterPtr router );
 
      void Receive( const exchange::MessagePtr& message ) override;
 
@@ -28,7 +28,7 @@ public:
 
      void Stop();
 
-     ~TcpServer() override;
+     ~ModbusTcpServer() override;
 
 private:
      void AcceptTask();
@@ -36,8 +36,7 @@ private:
      void ClientDisconnect( exchange::ActorId clientId );
 
 private:
-     TcpAcceptorPtr acceptor_;
-     TimeoutMs clientTimeout_;
+     TcpAcceptor acceptor_;
      RouterPtr router_;
      std::mutex mutex_;
      ClientDb clientDb_;

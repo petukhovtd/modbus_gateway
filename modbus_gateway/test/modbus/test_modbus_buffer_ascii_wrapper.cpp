@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
+#include <test/modbus_common.h>
 #include <modbus/modbus_buffer_ascii_wrapper.h>
-#include <modbus_test_common.h>
 
 using namespace modbus;
 

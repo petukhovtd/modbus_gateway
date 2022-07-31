@@ -1,9 +1,9 @@
-#ifndef MODBUS_GATEWAY_TEST_COMMON_H
-#define MODBUS_GATEWAY_TEST_COMMON_H
+#ifndef MODBUS_GATEWAY_MODBUS_COMMON_H
+#define MODBUS_GATEWAY_MODBUS_COMMON_H
 
 #include <modbus/modbus_buffer.h>
 
-namespace modbus::test
+namespace test
 {
 
 template< typename It >
@@ -24,7 +24,7 @@ bool Compare( It beginLhs, It endLhs, It beginRhs, It endRhs )
      return true;
 }
 
-modbus::ModbusBuffer MakeModbusBuffer( const AduBuffer& frame, FrameType type );
+modbus::ModbusBuffer MakeModbusBuffer( const modbus::AduBuffer& frame, modbus::FrameType type );
 
 }
 
