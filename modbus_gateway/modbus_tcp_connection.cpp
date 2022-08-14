@@ -55,19 +55,19 @@ ModbusMessagePtr ModbusTcpConnection::MakeRequest( const ModbusBufferPtr& modbus
 {
      if( !modbusBuffer->SetAduSize( size ) )
      {
-          FMT_LOG_ERROR( "ModbusTcpConnection: invalid adu size" )
+          FMT_LOG_ERROR( "ModbusTcpConnection::MakeRequest: invalid adu size" )
           return nullptr;
      }
-     FMT_LOG_TRACE( "TcpClient: request: [{:X}]", fmt::join( *modbusBuffer, " " ) )
+     FMT_LOG_TRACE( "ModbusTcpConnection::MakeRequest: request: [{:X}]", fmt::join( *modbusBuffer, " " ) )
      modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper( *modbusBuffer );
      modbus::CheckFrameResult checkFrameResult = modbusBufferTcpWrapper.Check();
      if( checkFrameResult != modbus::CheckFrameResult::NoError )
      {
-          FMT_LOG_ERROR( "ModbusTcpConnection: invalid tcp frame {}", checkFrameResult )
+          FMT_LOG_ERROR( "ModbusTcpConnection::MakeRequest: invalid tcp frame {}", checkFrameResult )
           return nullptr;
      }
 
-     FMT_LOG_DEBUG( "ModbusTcpConnection: request: transaction id {}, "
+     FMT_LOG_DEBUG( "ModbusTcpConnection::MakeRequest: request: transaction id {}, "
                     "protocol id {}, "
                     "length {}, "
                     "unit id {}, "
@@ -93,13 +93,13 @@ void ModbusTcpConnection::StartReadTask()
                     Ptr self = weak.lock();
                     if( !self )
                     {
-                         FMT_LOG_CRIT( "ModbusTcpConnection: actor was deleted" )
+                         FMT_LOG_CRIT( "ModbusTcpConnection: receive: actor was deleted" )
                          return;
                     }
 
                     if( ec )
                     {
-                         FMT_LOG_ERROR( "ModbusTcpConnection: receive error: {}", ec.message() )
+                         FMT_LOG_ERROR( "ModbusTcpConnection: receive: error: {}", ec.message() )
                          if( ( error::eof == ec ) || ( error::connection_reset == ec ) ||
                              ( error::operation_aborted == ec ) )
                          {
@@ -113,7 +113,7 @@ void ModbusTcpConnection::StartReadTask()
                          return;
                     }
 
-                    FMT_LOG_TRACE( "ModbusTcpConnection: receive {} bytes", size )
+                    FMT_LOG_TRACE( "ModbusTcpConnection: receive: {} bytes", size )
                     auto message = self->MakeRequest( modbusBuffer, size, self->GetId().value() );
                     if( !message )
                     {
@@ -128,13 +128,15 @@ void ModbusTcpConnection::StartReadTask()
 
                     const modbus::UnitId unitId = message->GetModbusBuffer()->GetUnitId();
                     const exchange::ActorId slaveId = self->router_->Route( unitId );
-                    FMT_LOG_TRACE( "ModbusTcpConnection: unit id {} route to slave id {}",
+                    FMT_LOG_TRACE( "ModbusTcpConnection: receive: unit id {} route to slave id {}",
                                    message->GetModbusMessageInfo().GetSourceId(), slaveId )
                     const auto res = exchange::Exchange::Send( slaveId, message );
                     if( !res )
                     {
-                         FMT_LOG_ERROR( "ModbusTcpConnection: route to slave id {} failed", slaveId )
+                         FMT_LOG_ERROR( "ModbusTcpConnection: receive: route to slave id {} failed", slaveId )
                     }
+
+                    self->StartReadTask();
                });
 }
 
@@ -145,7 +147,7 @@ ModbusBufferPtr ModbusTcpConnection::MakeResponse( const ModbusMessagePtr& modbu
 
      if( GetId().value() != messageInfo.GetSourceId() )
      {
-          FMT_LOG_WARN( "ModbusTcpConnection: receive stranger modbus message. self id {}, source id {}", GetId().value(),
+          FMT_LOG_WARN( "ModbusTcpConnection::MakeResponse: receive stranger modbus message. self id {}, source id {}", GetId().value(),
                         messageInfo.GetSourceId() )
           return nullptr;
      }
@@ -155,28 +157,28 @@ ModbusBufferPtr ModbusTcpConnection::MakeResponse( const ModbusMessagePtr& modbu
           ModbusMessageInfoOpt& modbusMessageInfoOpt = access.ref;
           if( !modbusMessageInfoOpt.has_value() )
           {
-               FMT_LOG_ERROR( "ModbusTcpConnection: last message info is empty, unknown modbus message. message id {}",
+               FMT_LOG_ERROR( "ModbusTcpConnection::MakeResponse: last message info is empty, unknown modbus message. message id {}",
                               messageInfo.GetMessageId() )
                return nullptr;
           }
           const ModbusMessageInfo& lastInfo = modbusMessageInfoOpt.value();
           if( lastInfo.GetMessageId() != messageInfo.GetMessageId() )
           {
-               FMT_LOG_ERROR( "ModbusTcpConnection: receive message id {} not equal last message id {}",
+               FMT_LOG_ERROR( "ModbusTcpConnection::MakeResponse: receive message id {} not equal last message id {}",
                               messageInfo.GetMessageId(), lastInfo.GetMessageId() )
                return nullptr;
           }
-          FMT_LOG_TRACE( "ModbusTcpConnection: message info checking succsessfully")
+          FMT_LOG_TRACE( "ModbusTcpConnection::MakeResponse: message info checking succsessfully")
           modbusMessageInfoOpt.reset();
      }
 
      if( !modbusBuffer )
      {
-          FMT_LOG_ERROR( "ModbusTcpConnection: modbus buffer is null. message id {}", messageInfo.GetMessageId() )
+          FMT_LOG_ERROR( "ModbusTcpConnection::MakeResponse: modbus buffer is null. message id {}", messageInfo.GetMessageId() )
           return nullptr;
      }
 
-     FMT_LOG_TRACE( "TcpClient: response: [{:X}]", fmt::join( *modbusBuffer, " " ) )
+     FMT_LOG_TRACE( "ModbusTcpConnection::MakeResponse: response: [{:X}]", fmt::join( *modbusBuffer, " " ) )
 
      modbusBuffer->ConvertTo( modbus::FrameType::TCP );
      modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper( *modbusBuffer );
@@ -184,7 +186,7 @@ ModbusBufferPtr ModbusTcpConnection::MakeResponse( const ModbusMessagePtr& modbu
      modbusBufferTcpWrapper.SetTransactionId( messageInfo.GetMessageId() );
 
 
-     FMT_LOG_TRACE( "ModbusTcpConnection: tcp response: transaction id {}, "
+     FMT_LOG_TRACE( "ModbusTcpConnection::MakeResponse: tcp response: transaction id {}, "
                     "protocol id {}, "
                     "length {}, "
                     "unit id {}, "
@@ -214,17 +216,17 @@ void ModbusTcpConnection::StartWriteMessage( const ModbusMessagePtr& modbusMessa
                                Ptr self = weak.lock();
                                if( !self )
                                {
-                                    FMT_LOG_CRIT( "ModbusTcpConnection: actor was deleted" )
+                                    FMT_LOG_CRIT( "ModbusTcpConnection: send: actor was deleted" )
                                     return;
                                }
 
                                if( ec )
                                {
-                                    FMT_LOG_ERROR( "ModbusTcpConnection: write error: {}", ec.message() )
+                                    FMT_LOG_ERROR( "ModbusTcpConnection: send: error: {}", ec.message() )
                                     return;
                                }
 
-                               FMT_LOG_TRACE( "ModbusTcpConnection: send {} bytes", size )
+                               FMT_LOG_TRACE( "ModbusTcpConnection: send: {} bytes", size )
                           } );
 }
 
