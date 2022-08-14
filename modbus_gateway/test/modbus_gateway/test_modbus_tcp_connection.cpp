@@ -9,6 +9,7 @@
 #include <types.h>
 #include <messages/modbus_message.h>
 #include <modbus_tcp_server.h>
+#include <modbus/modbus_buffer_tcp_wrapper.h>
 
 namespace
 {
@@ -70,6 +71,26 @@ TEST( ModbusTcpConnection, EchoTest )
                       {
                            return in;
                       }, sendBuffer, receiveBuffer );
+}
+
+TEST( ModbusTcpConnection, SaveTransactionIdTest )
+{
+     static const modbus::AduBuffer tcpFrame = { 0x0, 0x1, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4 };
+     auto sendBuffer = std::make_shared< modbus::ModbusBuffer >(
+     test::MakeModbusBuffer( tcpFrame, modbus::FrameType::TCP ) );
+     auto receiveBuffer = std::make_shared< modbus::ModbusBuffer >( modbus::FrameType::TCP );
+
+     ExchangeMessage( []( const modbus_gateway::ModbusMessagePtr& in )->modbus_gateway::ModbusMessagePtr
+                      {
+                           modbus_gateway::ModbusMessageInfo modbusMessageInfo = in->GetModbusMessageInfo();
+                           modbus_gateway::ModbusBufferPtr modbusBuffer = in->GetModbusBuffer();
+                           modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper( *modbusBuffer );
+                           auto id = modbusBufferTcpWrapper.GetTransactionId() + 1;
+                           modbusBufferTcpWrapper.SetTransactionId( id );
+                           return modbus_gateway::ModbusMessage::Create( modbusMessageInfo, modbusBuffer );
+                      }, sendBuffer, receiveBuffer );
+
+     EXPECT_TRUE( test::Compare( *sendBuffer, *receiveBuffer) );
 }
 
 TEST( ModbusTcpConnection, FailInputCheck )

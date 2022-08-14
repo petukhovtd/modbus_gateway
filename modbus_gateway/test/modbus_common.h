@@ -24,6 +24,12 @@ bool Compare( It beginLhs, It endLhs, It beginRhs, It endRhs )
      return true;
 }
 
+template< typename Container >
+bool Compare( const Container& lhs, const Container& rhs )
+{
+     return Compare( std::begin( lhs ), std::end( lhs ), std::begin( rhs ), std::end( rhs ) );
+}
+
 modbus::ModbusBuffer MakeModbusBuffer( const modbus::AduBuffer& frame, modbus::FrameType type );
 
 }
