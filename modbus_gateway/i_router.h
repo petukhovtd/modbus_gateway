@@ -12,7 +12,7 @@ class IRouter
 public:
      virtual ~IRouter() = default;
 
-     virtual exchange::ActorId Route( modbus::UnitId id ) const = 0;
+     [[nodiscard]] virtual exchange::ActorId Route( modbus::UnitId id ) const = 0;
 };
 
 }

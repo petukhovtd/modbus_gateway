@@ -22,7 +22,7 @@ using ModbusBufferPtr = std::shared_ptr< modbus::ModbusBuffer >;
 
 using RouterPtr = std::shared_ptr< IRouter >;
 
-using TimeoutMs = std::chrono::milliseconds::rep;
+using TimeoutMs = std::chrono::milliseconds;
 }
 
 #endif //MODBUS_GATEWAY_TYPES_H

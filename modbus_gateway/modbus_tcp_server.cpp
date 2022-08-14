@@ -36,7 +36,7 @@ void ModbusTcpServer::Start()
 void ModbusTcpServer::Stop()
 {
      error_code ec;
-     acceptor_.cancel( ec );
+     acceptor_.close( ec );
      {
           std::unique_lock< std::mutex > lock( mutex_ );
           for( const auto&[id, client]: clientDb_ )
@@ -55,20 +55,27 @@ void ModbusTcpServer::AcceptTask()
 {
      TcpSocketPtr socket = std::make_shared< TcpSocketPtr::element_type >( acceptor_.get_executor() );
      Weak weak = GetWeak();
-     acceptor_.async_accept( *socket, [ weak, socket ]( const error_code& ec )
+     acceptor_.async_accept( *socket, [ weak, socket ]( error_code ec )
      {
-          if( ec )
-          {
-               FMT_LOG_ERROR( "ModbusTcpServer: accept failed: {}", ec.message() )
-               return;
-          }
           Ptr self = weak.lock();
           if( !self )
           {
-               FMT_LOG_CRIT( "ModbusTcpServer: actor was deleted" )
+               FMT_LOG_CRIT( "ModbusTcpServer: accept: actor was deleted" )
                return;
           }
-          FMT_LOG_INFO( "ModbusTcpServer: connect from {}:{}", socket->remote_endpoint().address().to_string(),
+
+          if( ec )
+          {
+               FMT_LOG_ERROR( "ModbusTcpServer: accept: error: {}", ec.message() )
+               if( error::operation_aborted == ec )
+               {
+                    FMT_LOG_INFO( "ModbusTcpServer: accept: canceled" )
+                    return;
+               }
+               self->AcceptTask();
+               return;
+          }
+          FMT_LOG_INFO( "ModbusTcpServer: accept: connect from {}:{}", socket->remote_endpoint().address().to_string(),
                         socket->remote_endpoint().port() )
           auto tcpClient = ModbusTcpConnection::Create( self->GetId().value(), socket, self->router_ );
           auto clientId = exchange::Exchange::Insert( tcpClient );
