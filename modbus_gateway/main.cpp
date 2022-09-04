@@ -2,6 +2,8 @@
 #include <modbus_tcp_server.h>
 #include <modbus_tcp_connection.h>
 
+#include <modbus/modbus_buffer_tcp_wrapper.h>
+
 #include <exchange/exchange.h>
 
 #include <queue>
@@ -27,8 +29,87 @@ private:
      exchange::ActorId id_;
 };
 
+template< typename T >
+class LimitQueue
+{
+public:
+     explicit LimitQueue( size_t maxSize )
+     : queue_()
+     , maxSize_( maxSize )
+     {
+          assert( maxSize_ > 0 );
+     }
+
+     LimitQueue()
+     : LimitQueue( std::numeric_limits< size_t >::max() )
+     {}
+
+     void Push( const T& val )
+     {
+          if( queue_.size() > maxSize_ )
+          {
+               queue_.pop();
+          }
+          queue_.push( val );
+     }
+
+     void Pop()
+     {
+          return queue_.pop();
+     }
+
+     const T& Front() const
+     {
+          return queue_.front();
+     }
+
+     size_t Size() const
+     {
+          return queue_.size();
+     }
+
+     bool Empty() const
+     {
+          return queue_.empty();
+     }
+
+     size_t MaxSize() const
+     {
+          return maxSize_;
+     }
+
+private:
+     std::queue< T > queue_;
+     size_t maxSize_;
+};
+
 class ModbusTcpMaster: public exchange::ActorHelper< ModbusTcpMaster >
 {
+     struct ModbusCurrentMessage
+     {
+          ModbusMessagePtr modbusMessage;
+          modbus::TransactionId id;
+     };
+
+     enum class State
+     {
+          Idle,
+          WaitConnect,
+          Connected,
+          MessageProcess,
+     };
+
+     static std::string StateToStr( State state )
+     {
+          switch( state )
+          {
+               case State::Idle: return "Idle";
+               case State::WaitConnect: return "WaitConnect";
+               case State::Connected: return "Connected";
+               case State::MessageProcess: return "MessageProcess";
+               default: return "Unknown";
+          }
+     }
 public:
      ModbusTcpMaster( const ContextPtr& context, const asio::ip::address& addr, asio::ip::port_type port, std::chrono::milliseconds timeout )
      : socket_( std::make_unique< TcpSocketUPtr::element_type >( *context ) )
@@ -37,7 +118,9 @@ public:
      , timer_( socket_->get_executor() )
      , m_()
      , messageQueue_()
-     , currentMessage_( nullptr )
+     , currentMessage_( std::nullopt )
+     , transactionIdGenerator_( 0 )
+     , state_( State::Idle )
      {
      }
 
@@ -56,7 +139,7 @@ public:
           auto modbusMessage = std::dynamic_pointer_cast< ModbusMessagePtr::element_type >( message );
           if( modbusMessage )
           {
-               FMT_LOG_TRACE( "ModbusTcpMaster::ModbusMessage" )
+               FMT_LOG_TRACE( "ModbusTcpMaster::Receive ModbusMessage" )
                MessageProcess( modbusMessage );
                return;
           }
@@ -67,20 +150,37 @@ private:
      void MessageProcess( const ModbusMessagePtr& message )
      {
           std::lock_guard< std::mutex > lock( m_ );
-          messageQueue_.push( message );
-          if( currentMessage_ )
+          messageQueue_.Push( message );
+          FMT_LOG_TRACE( "MessageProcess: message in queue {}", messageQueue_.Size() )
+
+          QueueProcessUnsafe();
+     }
+
+     void QueueProcessUnsafe()
+     {
+          FMT_LOG_TRACE( "ModbusTcpMaster::QueueProcess" )
+          if( messageQueue_.Empty() )
           {
-               FMT_LOG_DEBUG( "MessageProcess: message in queue {}", messageQueue_.size() )
+               FMT_LOG_DEBUG( "ModbusTcpMaster: queue empty" )
                return;
           }
 
-          if( socket_->is_open() )
+          FMT_LOG_TRACE( "ModbusTcpMaster::QueueProcess: state: {}", StateToStr( state_ ) )
+
+          switch( state_ )
           {
-               StartMessageTaskUnsafe();
-          }
-          else
-          {
-               StartConnectTaskUnsafe();
+               case State::Idle:
+                    StartConnectTaskUnsafe();
+                    break;
+               case State::WaitConnect:
+                    FMT_LOG_DEBUG( "MessageProcess: wait connect" )
+                    break;
+               case State::Connected:
+                    StartMessageTaskUnsafe();
+                    break;
+               case State::MessageProcess:
+                    FMT_LOG_DEBUG( "MessageProcess: message in process" )
+                    break;
           }
      }
 
@@ -105,23 +205,31 @@ private:
                     return;
                }
 
+               std::lock_guard< std::mutex > lock( self->m_ );
+
                if( ec )
                {
+                    self->state_ = State::Idle;
+
                     FMT_LOG_ERROR( "ModbusTcpMaster: connect: error: {}", ec.message() )
-                    self->currentMessage_.reset();
                     if( ( asio::error::operation_aborted == ec ) )
                     {
                          FMT_LOG_INFO( "ModbusTcpMaster: connect: canceled" )
                          return;
                     }
-                    FMT_LOG_INFO( "ModbusTcpMaster: connect: start new connect tast" )
-                    self->StartConnectTask();
+//                    FMT_LOG_INFO( "ModbusTcpMaster: connect: start connect task" )
+//                    self->StartConnectTask();
                     return;
                }
+
+               self->state_ = State::Connected;
+
                FMT_LOG_INFO( "ModbusTcpMaster: connect to {}:{}",
                              self->socket_->remote_endpoint().address().to_string(),
                              self->socket_->remote_endpoint().port() )
-               self->StartMessageTask();
+
+               FMT_LOG_TRACE( "ModbusTcpMaster: connect: start queue process" )
+               self->QueueProcessUnsafe();
           });
      }
 
@@ -135,30 +243,31 @@ private:
      void StartMessageTaskUnsafe()
      {
           FMT_LOG_TRACE( "ModbusTcpMaster::StartMessageTaskUnsafe" )
-          if( !socket_->is_open() )
+          if( messageQueue_.Empty() )
           {
-               FMT_LOG_ERROR( "StartMessageTaskUnsafe: socket not open, start connect" )
-               StartConnectTaskUnsafe();
-               return;
-          }
-          if( messageQueue_.empty() )
-          {
-               FMT_LOG_ERROR( "StartMessageTaskUnsafe: message queue empty" )
+               FMT_LOG_INFO( "StartMessageTaskUnsafe: message queue empty" )
                return;
           }
           if( currentMessage_ )
           {
-               FMT_LOG_ERROR( "StartMessageTaskUnsafe: message in process" )
+               FMT_LOG_INFO( "StartMessageTaskUnsafe: message in process" )
                return;
           }
 
-          currentMessage_ = messageQueue_.front();
-          messageQueue_.pop();
+          state_ = State::MessageProcess;
+          currentMessage_ = { messageQueue_.Front(), ++transactionIdGenerator_ };
+          messageQueue_.Pop();
 
-          const ModbusBufferPtr& modbusBufferPtr = currentMessage_->GetModbusBuffer();
+          ModbusBufferPtr modbusBuffer = currentMessage_->modbusMessage->GetModbusBuffer();
+          {
+               modbusBuffer->ConvertTo( modbus::FrameType::TCP );
+               modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper( *modbusBuffer );
+               modbusBufferTcpWrapper.Update();
+               modbusBufferTcpWrapper.SetTransactionId( currentMessage_->id );
+          }
 
           Weak weak = GetWeak();
-          socket_->async_send( asio::buffer( modbusBufferPtr->begin().base(), modbusBufferPtr->GetAduSize() ), [ weak ]( asio::error_code ec, size_t size )
+          socket_->async_send( asio::buffer( modbusBuffer->begin().base(), modbusBuffer->GetAduSize() ), [ weak ]( asio::error_code ec, size_t size )
           {
                Ptr self = weak.lock();
                if( !self )
@@ -171,17 +280,20 @@ private:
 
                if( ec )
                {
-                    FMT_LOG_INFO( "ModbusTcpMaster: send: error {}", ec.message() )
+                    FMT_LOG_ERROR( "ModbusTcpMaster: send: error {}", ec.message() )
                     self->currentMessage_.reset();
-                    if( ( asio::error::eof == ec ) || ( asio::error::connection_reset == ec ) )
+                    if( asio::error::operation_aborted != ec )
                     {
-                         FMT_LOG_INFO( "ModbusTcpMaster: send: start new connect task" )
-                         self->StartConnectTask();
+                         FMT_LOG_INFO( "ModbusTcpMaster: send: close connection" )
+                         self->state_ = State::Idle;
+                         self->socket_->close( ec );
                     }
                     return;
                }
 
+               FMT_LOG_TRACE( "ModbusTcpMaster: send: start wait task" )
                self->StartWaitTask();
+               FMT_LOG_TRACE( "ModbusTcpMaster: send: start receive task" )
                self->StartReceiveTask();
           });
      }
@@ -189,8 +301,11 @@ private:
      void StartWaitTask()
      {
           FMT_LOG_TRACE( "ModbusTcpMaster::StartWaitTask" )
-          Weak weak = GetWeak();
+
+          FMT_LOG_DEBUG( "ModbusTcpMaster::StartWaitTask timeout {}ms", timeout_.count() )
           timer_.expires_after( timeout_ );
+
+          Weak weak = GetWeak();
           timer_.async_wait( [ weak ]( asio::error_code ec )
                              {
                                   Ptr self = weak.lock();
@@ -214,7 +329,6 @@ private:
                                   }
 
                                   FMT_LOG_TRACE( "ModbusTcpMaster: wait: achieve timeout, cancel receive task" )
-                                  self->currentMessage_.reset();
                                   self->socket_->cancel( ec );
                              });
      }
@@ -222,6 +336,8 @@ private:
      void StartReceiveTask()
      {
           FMT_LOG_TRACE( "ModbusTcpMaster::StartReceiveTask" )
+          // Теортерически возможно переиспользовать и входной буффер, но необходимо его
+          // отчистить и выставить максимальный размер
           auto modbusBuffer = std::make_shared< modbus::ModbusBuffer >( modbus::FrameType::TCP );
           Weak weak = GetWeak();
           socket_->async_receive( asio::buffer( modbusBuffer->begin().operator->(), modbusBuffer->GetAduSize() ),
@@ -238,6 +354,9 @@ private:
 
                                        try
                                        {
+                                            const auto tp = self->timer_.expiry() - std::chrono::steady_clock::now();
+                                            const auto exp = tp.count() / std::chrono::microseconds::period::den;
+                                            FMT_LOG_DEBUG("ModbusTcpMaster: receive: expiry {}", exp )
                                             self->timer_.cancel();
                                        }
                                        catch( const asio::system_error& e )
@@ -247,30 +366,55 @@ private:
 
                                        if( ec )
                                        {
-                                            if( asio::error::operation_aborted == ec )
-                                            {
-                                                 FMT_LOG_DEBUG( "ModbusTcpMaster: receive: canceled" )
-                                                 return;
-                                            }
                                             FMT_LOG_ERROR( "ModbusTcpMaster: receive: error: {}", ec.message() )
                                             self->currentMessage_.reset();
+                                            if( asio::error::operation_aborted != ec )
+                                            {
+                                                 FMT_LOG_INFO( "ModbusTcpMaster: send: close connection" )
+                                                 self->state_ = State::Idle;
+                                                 self->socket_->close( ec );
+                                            }
                                             return;
                                        }
 
-                                       FMT_LOG_TRACE( "ModbusTcpMaster: receive: {} bytes", size )
+                                       if( !self->currentMessage_ )
+                                       {
+                                            FMT_LOG_WARN( "ModbusTcpMaster: receive: no current message" )
+                                            return;
+                                       }
+
+                                       FMT_LOG_DEBUG( "ModbusTcpMaster: receive: {} bytes", size )
                                        modbusBuffer->SetAduSize( size );
 
-                                       const auto currentMessage = self->currentMessage_;
+                                       const auto currentMessage = self->currentMessage_->modbusMessage;
+                                       const auto id = self->currentMessage_->id;
                                        self->currentMessage_.reset();
 
                                        const ModbusMessageInfo currentInfo = currentMessage->GetModbusMessageInfo();
 
                                        {
-                                             // Check message here
+                                             modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper( *modbusBuffer );
+                                             const auto result = modbusBufferTcpWrapper.Check();
+                                             if( result != modbus::CheckFrameResult::NoError )
+                                             {
+                                                  FMT_LOG_ERROR( "ModbusTcpMaster: receive: check message failed: {}", result )
+                                                  return;
+                                             }
+
+                                             if( modbusBufferTcpWrapper.GetTransactionId() != id )
+                                             {
+                                                  FMT_LOG_ERROR(
+                                                  "ModbusTcpMaster: receive: receive message id {} not equal send message id {}",
+                                                  modbusBufferTcpWrapper.GetTransactionId(), id )
+                                                  return;
+                                             }
                                        }
 
                                        exchange::Exchange::Send( currentInfo.GetSourceId(),
                                                                  ModbusMessage::Create( currentInfo, modbusBuffer ) );
+
+                                       self->state_ = State::Connected;
+                                       self->QueueProcessUnsafe();
                                   });
      }
 
@@ -280,8 +424,10 @@ private:
      TimeoutMs timeout_;
      asio::basic_waitable_timer< std::chrono::steady_clock > timer_;
      std::mutex m_;
-     std::queue< ModbusMessagePtr > messageQueue_;
-     ModbusMessagePtr currentMessage_;
+     LimitQueue< ModbusMessagePtr > messageQueue_;
+     std::optional< ModbusCurrentMessage > currentMessage_;
+     modbus::TransactionId transactionIdGenerator_;
+     State state_;
 };
 
 int main()
