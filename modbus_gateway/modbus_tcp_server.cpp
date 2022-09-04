@@ -72,6 +72,7 @@ void ModbusTcpServer::AcceptTask()
                     FMT_LOG_INFO( "ModbusTcpServer: accept: canceled" )
                     return;
                }
+               FMT_LOG_TRACE( "ModbusTcpServer: accept: start accept task" )
                self->AcceptTask();
                return;
           }
@@ -91,7 +92,7 @@ void ModbusTcpServer::AcceptTask()
 void ModbusTcpServer::ClientDisconnect( exchange::ActorId clientId )
 {
      std::unique_lock< std::mutex > lock( mutex_ );
-     FMT_LOG_INFO( "ModbusTcpServer: remove {}", clientId )
+     FMT_LOG_INFO( "ModbusTcpServer: remove client {}", clientId )
      clientDb_.erase( clientId );
 }
 

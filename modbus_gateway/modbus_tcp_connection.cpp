@@ -30,7 +30,7 @@ void ModbusTcpConnection::Receive( const exchange::MessagePtr& message )
      if( modbusMessage )
      {
           FMT_LOG_TRACE( "ModbusTcpConnection::Receive ModbusMessage" )
-          StartWriteMessage( modbusMessage );
+          StartSendTask( modbusMessage );
           return;
      }
      FMT_LOG_TRACE( "ModbusTcpConnection::Receive unsupported message" )
@@ -42,7 +42,7 @@ void ModbusTcpConnection::Start()
      FMT_LOG_INFO( "ModbusTcpConnection::Start {}:{}, server id {}, client id {}",
                    socket_->remote_endpoint().address().to_string(),
                    socket_->remote_endpoint().port(), serverId_, GetId().value() )
-     StartReadTask();
+     StartReceiveTask();
 }
 
 void ModbusTcpConnection::Stop()
@@ -78,11 +78,11 @@ ModbusMessagePtr ModbusTcpConnection::MakeRequest( const ModbusBufferPtr& modbus
                     modbusBuffer->GetUnitId(),
                     modbusBuffer->GetFunctionCode() )
 
-     ModbusMessageInfo modbusMessageInfo( modbusBufferTcpWrapper.GetTransactionId(), masterId );
+     ModbusMessageInfo modbusMessageInfo( masterId, modbusBufferTcpWrapper.GetTransactionId() );
      return std::make_shared< ModbusMessagePtr::element_type >( modbusMessageInfo, modbusBuffer );
 }
 
-void ModbusTcpConnection::StartReadTask()
+void ModbusTcpConnection::StartReceiveTask()
 {
      FMT_LOG_TRACE( "ModbusTcpConnection::StartReadTask" )
      Weak weak = GetWeak();
@@ -103,21 +103,22 @@ void ModbusTcpConnection::StartReadTask()
                          if( ( error::eof == ec ) || ( error::connection_reset == ec ) ||
                              ( error::operation_aborted == ec ) )
                          {
-                              FMT_LOG_INFO( "ModbusTcpConnection: send disconnect message" )
+                              FMT_LOG_INFO( "ModbusTcpConnection: receive: send disconnect message" )
                               exchange::Exchange::Send( self->serverId_,
                                                         ClientDisconnectMessage::Create( self->GetId().value() ) );
                               return;
                          }
-
-                         self->StartReadTask();
+                         FMT_LOG_TRACE( "ModbusTcpConnection: receive: start receive task" )
+                         self->StartReceiveTask();
                          return;
                     }
 
-                    FMT_LOG_TRACE( "ModbusTcpConnection: receive: {} bytes", size )
+                    FMT_LOG_DEBUG( "ModbusTcpConnection: receive: {} bytes", size )
                     auto message = self->MakeRequest( modbusBuffer, size, self->GetId().value() );
                     if( !message )
                     {
-                         self->StartReadTask();
+                         FMT_LOG_INFO( "ModbusTcpConnection: receive: invalid request, start receive task" )
+                         self->StartReceiveTask();
                          return;
                     }
 
@@ -128,15 +129,15 @@ void ModbusTcpConnection::StartReadTask()
 
                     const modbus::UnitId unitId = message->GetModbusBuffer()->GetUnitId();
                     const exchange::ActorId slaveId = self->router_->Route( unitId );
-                    FMT_LOG_TRACE( "ModbusTcpConnection: receive: unit id {} route to slave id {}",
+                    FMT_LOG_DEBUG( "ModbusTcpConnection: receive: unit id {} route to slave id {}",
                                    message->GetModbusMessageInfo().GetSourceId(), slaveId )
                     const auto res = exchange::Exchange::Send( slaveId, message );
                     if( !res )
                     {
                          FMT_LOG_ERROR( "ModbusTcpConnection: receive: route to slave id {} failed", slaveId )
                     }
-
-                    self->StartReadTask();
+                    FMT_LOG_TRACE( "ModbusTcpConnection: receive: start receive task" )
+                    self->StartReceiveTask();
                });
 }
 
@@ -158,35 +159,35 @@ ModbusBufferPtr ModbusTcpConnection::MakeResponse( const ModbusMessagePtr& modbu
           if( !modbusMessageInfoOpt.has_value() )
           {
                FMT_LOG_ERROR( "ModbusTcpConnection::MakeResponse: last message info is empty, unknown modbus message. message id {}",
-                              messageInfo.GetMessageId() )
+                              messageInfo.GetTransactionId() )
                return nullptr;
           }
           const ModbusMessageInfo& lastInfo = modbusMessageInfoOpt.value();
-          if( lastInfo.GetMessageId() != messageInfo.GetMessageId() )
+          if( lastInfo.GetTransactionId() != messageInfo.GetTransactionId() )
           {
                FMT_LOG_ERROR( "ModbusTcpConnection::MakeResponse: receive message id {} not equal last message id {}",
-                              messageInfo.GetMessageId(), lastInfo.GetMessageId() )
+                              messageInfo.GetTransactionId(), lastInfo.GetTransactionId() )
                return nullptr;
           }
-          FMT_LOG_TRACE( "ModbusTcpConnection::MakeResponse: message info checking succsessfully")
+          FMT_LOG_TRACE( "ModbusTcpConnection::MakeResponse: message info checking successfully")
           modbusMessageInfoOpt.reset();
      }
 
      if( !modbusBuffer )
      {
-          FMT_LOG_ERROR( "ModbusTcpConnection::MakeResponse: modbus buffer is null. message id {}", messageInfo.GetMessageId() )
+          FMT_LOG_ERROR( "ModbusTcpConnection::MakeResponse: modbus buffer is null. message id {}", messageInfo.GetTransactionId() )
           return nullptr;
      }
 
-     FMT_LOG_TRACE( "ModbusTcpConnection::MakeResponse: response: [{:X}]", fmt::join( *modbusBuffer, " " ) )
+     FMT_LOG_DEBUG( "ModbusTcpConnection::MakeResponse: response: [{:X}]", fmt::join( *modbusBuffer, " " ) )
 
      modbusBuffer->ConvertTo( modbus::FrameType::TCP );
      modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper( *modbusBuffer );
      modbusBufferTcpWrapper.Update();
-     modbusBufferTcpWrapper.SetTransactionId( messageInfo.GetMessageId() );
+     modbusBufferTcpWrapper.SetTransactionId( messageInfo.GetTransactionId() );
 
 
-     FMT_LOG_TRACE( "ModbusTcpConnection::MakeResponse: tcp response: transaction id {}, "
+     FMT_LOG_DEBUG( "ModbusTcpConnection::MakeResponse: tcp response: transaction id {}, "
                     "protocol id {}, "
                     "length {}, "
                     "unit id {}, "
@@ -200,7 +201,7 @@ ModbusBufferPtr ModbusTcpConnection::MakeResponse( const ModbusMessagePtr& modbu
      return modbusBuffer;
 }
 
-void ModbusTcpConnection::StartWriteMessage( const ModbusMessagePtr& modbusMessage )
+void ModbusTcpConnection::StartSendTask( const ModbusMessagePtr& modbusMessage )
 {
      FMT_LOG_TRACE( "ModbusTcpConnection::SyncWriteMessage" )
      ModbusBufferPtr modbusBuffer = MakeResponse( modbusMessage );
@@ -226,7 +227,7 @@ void ModbusTcpConnection::StartWriteMessage( const ModbusMessagePtr& modbusMessa
                                     return;
                                }
 
-                               FMT_LOG_TRACE( "ModbusTcpConnection: send: {} bytes", size )
+                               FMT_LOG_DEBUG( "ModbusTcpConnection: send: {} bytes", size )
                           } );
 }
 

@@ -27,11 +27,11 @@ public:
 private:
      static ModbusMessagePtr MakeRequest( const ModbusBufferPtr& modbusBuffer, size_t size, exchange::ActorId masterId );
 
-     void StartReadTask();
+     void StartReceiveTask();
 
      ModbusBufferPtr MakeResponse( const ModbusMessagePtr& modbusMessage );
 
-     void StartWriteMessage( const ModbusMessagePtr& modbusMessage );
+     void StartSendTask( const ModbusMessagePtr& modbusMessage );
 
 private:
      exchange::ActorId serverId_;
