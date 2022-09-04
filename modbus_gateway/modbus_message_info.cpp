@@ -3,11 +3,11 @@
 namespace modbus_gateway
 {
 
-ModbusMessageInfo::ModbusMessageInfo( MessageId messageId, exchange::ActorId sourceId )
+ModbusMessageInfo::ModbusMessageInfo( exchange::ActorId sourceId, modbus::TransactionId transactionId )
 : createTimeStamp_( GetCurrentTimestamp() )
 , timeoutReached_( false )
-, messageId_( messageId )
 , sourceId_( sourceId )
+, transactionId_( transactionId )
 {}
 
 bool ModbusMessageInfo::TimeoutReached( std::chrono::nanoseconds timeout ) const
@@ -25,14 +25,14 @@ bool ModbusMessageInfo::TimeoutReached( std::chrono::nanoseconds timeout ) const
      return timeoutReached_;
 }
 
-MessageId ModbusMessageInfo::GetMessageId() const
-{
-     return messageId_;
-}
-
 exchange::ActorId ModbusMessageInfo::GetSourceId() const
 {
      return sourceId_;
+}
+
+modbus::TransactionId ModbusMessageInfo::GetTransactionId() const
+{
+     return transactionId_;
 }
 
 std::chrono::nanoseconds ModbusMessageInfo::GetCurrentTimestamp()

@@ -137,7 +137,7 @@ TEST( ModbusTcpConnection, InvalidMessageId )
 
      ExchangeMessage( []( const modbus_gateway::ModbusMessagePtr& in )->modbus_gateway::ModbusMessagePtr
                       {
-                           modbus_gateway::ModbusMessageInfo info( in->GetModbusMessageInfo().GetMessageId() + 1,
+                           modbus_gateway::ModbusMessageInfo info( in->GetModbusMessageInfo().GetTransactionId() + 1,
                                                                    in->GetModbusMessageInfo().GetSourceId() );
                            return modbus_gateway::ModbusMessage::Create( info, in->GetModbusBuffer() );
                       }, sendBuffer, receiveBuffer );
@@ -155,7 +155,7 @@ TEST( ModbusTcpConnection, InvalidSourceId )
 
      ExchangeMessage( []( const modbus_gateway::ModbusMessagePtr& in )->modbus_gateway::ModbusMessagePtr
                       {
-                           modbus_gateway::ModbusMessageInfo info( in->GetModbusMessageInfo().GetMessageId(),
+                           modbus_gateway::ModbusMessageInfo info( in->GetModbusMessageInfo().GetTransactionId(),
                                                                    in->GetModbusMessageInfo().GetSourceId() + 1 );
                            return modbus_gateway::ModbusMessage::Create( info, in->GetModbusBuffer() );
                       }, sendBuffer, receiveBuffer );
