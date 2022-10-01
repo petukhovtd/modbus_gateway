@@ -179,15 +179,12 @@ ModbusBufferPtr ModbusTcpConnection::MakeResponse( const ModbusMessagePtr& modbu
           return nullptr;
      }
 
-     FMT_LOG_DEBUG( "ModbusTcpConnection::MakeResponse: response: [{:X}]", fmt::join( *modbusBuffer, " " ) )
-
      modbusBuffer->ConvertTo( modbus::FrameType::TCP );
      modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper( *modbusBuffer );
      modbusBufferTcpWrapper.Update();
      modbusBufferTcpWrapper.SetTransactionId( messageInfo.GetTransactionId() );
 
-
-     FMT_LOG_DEBUG( "ModbusTcpConnection::MakeResponse: tcp response: transaction id {}, "
+     FMT_LOG_DEBUG( "ModbusTcpConnection::MakeResponse: response: transaction id {}, "
                     "protocol id {}, "
                     "length {}, "
                     "unit id {}, "
@@ -197,6 +194,8 @@ ModbusBufferPtr ModbusTcpConnection::MakeResponse( const ModbusMessagePtr& modbu
                     modbusBufferTcpWrapper.GetLength(),
                     modbusBuffer->GetUnitId(),
                     modbusBuffer->GetFunctionCode() )
+
+     FMT_LOG_DEBUG( "ModbusTcpConnection::MakeResponse: response: [{:X}]", fmt::join( *modbusBuffer, " " ) )
 
      return modbusBuffer;
 }
