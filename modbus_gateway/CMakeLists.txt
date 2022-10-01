@@ -10,6 +10,7 @@ set(MODBUS_GATEWAY_SOURCE
 
           modbus_tcp_server.cpp
           modbus_tcp_connection.cpp
+          modbus_tcp_master.cpp
 )
 
 add_executable(${PROJECT_NAME} ${MODBUS_GATEWAY_SOURCE} main.cpp)
