@@ -23,6 +23,12 @@ using ModbusBufferPtr = std::shared_ptr< modbus::ModbusBuffer >;
 using RouterPtr = std::shared_ptr< IRouter >;
 
 using TimeoutMs = std::chrono::milliseconds;
+
+enum TransportType
+{
+     TCP,
+};
+
 }
 
 #endif //MODBUS_GATEWAY_TYPES_H

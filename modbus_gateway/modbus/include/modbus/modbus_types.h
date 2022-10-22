@@ -20,6 +20,8 @@ using UnitId = uint8_t;
 using FunctionCode = uint8_t ;
 
 static const size_t unitIdSize = sizeof( UnitId );
+static const UnitId unitIdMin = 1;
+static const UnitId unitIdMax = 247;
 static const size_t functionCodeSize = sizeof( FunctionCode );
 static const size_t crcSize = 2;
 static const size_t pduMinSize = functionCodeSize;

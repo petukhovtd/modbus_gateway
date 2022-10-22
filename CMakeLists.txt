@@ -10,9 +10,11 @@ include_directories(
           contrib/exchange/include
           contrib/googletest/googletest/include
           contrib/spdlog/include
+          contrib/json/include
 )
 
 add_subdirectory(contrib/exchange)
 add_subdirectory(contrib/googletest)
 add_subdirectory(contrib/spdlog)
+add_subdirectory(contrib/json)
 add_subdirectory(modbus_gateway)

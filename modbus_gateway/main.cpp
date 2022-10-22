@@ -3,10 +3,16 @@
 #include <modbus_tcp_server.h>
 #include <modbus_tcp_connection.h>
 #include <modbus_tcp_master.h>
-
+#include <config/config.h>
+#include <config/invalid_value_exception.h>
 #include <exchange/exchange.h>
 
 #include <iostream>
+
+#include <fstream>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 using namespace modbus_gateway;
 
@@ -28,8 +34,34 @@ private:
      exchange::ActorId id_;
 };
 
+
+
+void jsontest()
+{
+     std::ifstream file( "../../modbus_gateway/config_example.json" );
+     if( !file )
+     {
+          std::cerr << "no file" << std::endl;
+          return;
+     }
+     try
+     {
+          Config config( file );
+     }
+     catch( const InvalidValueException& e )
+     {
+          std::cout << e.what() << '\n'
+                    << "path: " << e.GetFullPath() << '\n'
+          << "value: " << e.GetValue() << '\n';
+     }
+
+}
+
 int main()
 {
+     jsontest();
+     return 0;
+
      using namespace std::chrono_literals;
 
      FmtLogger::SetLogLevel( FmtLogger::LogLevel::Trace );

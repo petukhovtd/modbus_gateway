@@ -1,0 +1,37 @@
+{
+  "log_level": "trace",
+  "servers": [
+    {
+      "transport_type": "tcp",
+      "ip_port": 502
+    },
+    {
+      "transport_type": "tcp",
+      "ip_address": "10.10.10.22",
+      "ip_port": 1234
+    }
+  ],
+  "clients": [
+    {
+      "transport_type": "tcp",
+      "ip_address": "10.10.20.22",
+      "ip_port": 502,
+      "unit_id": [
+        {
+          "type": "range",
+          "begin": 1,
+          "end": 127
+        },
+        {
+          "type": "value",
+          "value": 130
+        }
+      ]
+    },
+    {
+      "transport_type": "tcp",
+      "ip_address": "10.10.20.33",
+      "ip_port": 502
+    }
+  ]
+}

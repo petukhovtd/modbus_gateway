@@ -10,3 +10,6 @@
 [submodule "contrib/exchange"]
 	path = contrib/exchange
 	url = git@github.com:petukhovtd/exchange.git
+[submodule "contrib/json"]
+	path = contrib/json
+	url = git@github.com:nlohmann/json.git
