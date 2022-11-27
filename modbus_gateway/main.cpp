@@ -1,96 +1,53 @@
+#include "command_line.h"
+#include "config/config.h"
+#include "config/parser_exception.h"
 #include <common/fmt_logger.h>
-#include <common/limit_queue.h>
-#include <modbus_tcp_server.h>
-#include <modbus_tcp_connection.h>
-#include <modbus_tcp_master.h>
-#include <config/config.h>
-#include <config/invalid_value_exception.h>
-#include <exchange/exchange.h>
+#include "modbus_gateway.h"
 
 #include <iostream>
-
 #include <fstream>
-#include <nlohmann/json.hpp>
-
-using json = nlohmann::json;
 
 using namespace modbus_gateway;
 
-class SingleRouter: public IRouter
+int main( int argc, char* argv[] )
 {
-public:
-     explicit SingleRouter( exchange::ActorId id )
-     : id_( id )
-     {}
-
-     ~SingleRouter() override = default;
-
-     [[nodiscard]] exchange::ActorId Route( modbus::UnitId id ) const override
-     {
-          return id;
-     }
-
-private:
-     exchange::ActorId id_;
-};
-
-
-
-void jsontest()
-{
-     std::ifstream file( "../../modbus_gateway/config_example.json" );
-     if( !file )
-     {
-          std::cerr << "no file" << std::endl;
-          return;
-     }
+     int rc = EXIT_SUCCESS;
      try
      {
-          Config config( file );
+          CommandLine commandLine( argc, argv );
+
+          if( commandLine.IsHelp() )
+          {
+               commandLine.PrintHelp( std::cout );
+               return EXIT_SUCCESS;
+          }
+
+          const std::string& configPath = commandLine.GetConfigPath();
+          std::ifstream configFile( configPath );
+          Config config( configFile );
+          config.Validate();
+
+          FmtLogger::SetLogLevel( config.GetLogLevel() );
+
+          rc = ModbusGateway( config );
      }
-     catch( const InvalidValueException& e )
+     catch( const ParserException& e )
      {
-          std::cout << e.what() << '\n'
-                    << "path: " << e.GetFullPath() << '\n'
-          << "value: " << e.GetValue() << '\n';
+          std::cerr << e.what() << '\n'
+                    << "in: " << e.GetTargetKey() << '\n'
+                    << "path: " << e.GetFullPath() << std::endl;
+          rc = EXIT_FAILURE;
      }
-
-}
-
-int main()
-{
-     jsontest();
-     return 0;
-
-     using namespace std::chrono_literals;
-
-     FmtLogger::SetLogLevel( FmtLogger::LogLevel::Trace );
-
-     ContextPtr context = std::make_shared< ContextPtr::element_type >();
-     auto work = asio::executor_work_guard( context->get_executor() );
-     auto contextThread = std::thread( [ context ]()
-                                       {
-                                            context->run();
-                                       } );
-
-     ModbusTcpMaster::Ptr tcpMaster = ModbusTcpMaster::Create( context, asio::ip::make_address( "10.10.20.22"), 502, 1000ms );
-     const auto tcpMasterId = exchange::Exchange::Insert( tcpMaster );
-
-     RouterPtr router = std::make_shared< SingleRouter >( tcpMasterId );
-
-     ModbusTcpServer::Ptr tcpServer = ModbusTcpServer::Create( context, asio::ip::address_v4::any(), 502, router );
-     exchange::Exchange::Insert( tcpServer );
-     tcpServer->Start();
-
-     std::cin.get();
-
-     tcpServer->Stop();
-
-     context->stop();
-     if( contextThread.joinable() )
+     catch( const std::exception& e )
      {
-          contextThread.join();
+          std::cerr << e.what() << std::endl;
+          rc = EXIT_FAILURE;
+     }
+     catch( ... )
+     {
+          std::cerr << "unknown exception" << std::endl;
+          rc = EXIT_FAILURE;
      }
 
-     return 0;
+     return rc;
 }

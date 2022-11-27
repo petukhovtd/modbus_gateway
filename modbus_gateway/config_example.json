@@ -4,11 +4,6 @@
     {
       "transport_type": "tcp",
       "ip_port": 502
-    },
-    {
-      "transport_type": "tcp",
-      "ip_address": "10.10.10.22",
-      "ip_port": 1234
     }
   ],
   "clients": [
@@ -30,8 +25,8 @@
     },
     {
       "transport_type": "tcp",
-      "ip_address": "10.10.20.33",
-      "ip_port": 502
+      "ip_address": "10.10.20.22",
+      "ip_port": 503
     }
   ]
 }

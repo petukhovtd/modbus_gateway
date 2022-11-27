@@ -16,10 +16,12 @@ void ValidateServers( TracePath& tracePath, const std::vector< TransportConfigPt
      using AddressSet = std::vector< asio::ip::address >;
      std::map< asio::ip::port_type, AddressSet > tcpServerEnpoints;
 
+     TraceDeep td( tracePath, "servers" );
+
      size_t index = 0;
      for( const auto& server: servers )
      {
-          TraceDeep td( tracePath, std::to_string( index ) );
+          TraceDeep tdServer( tracePath, std::to_string( index ) );
           switch( server->GetType() )
           {
                case TCP:
@@ -51,7 +53,7 @@ void ValidateServers( TracePath& tracePath, const std::vector< TransportConfigPt
                          {
                               std::stringstream ss;
                               ss << "any ip address intersected with ip address on other server";
-                              throw InvalidValueException( td, ss.str() );
+                              throw InvalidValueException( tdServer, ss.str() );
                          }
 
                          if( addressSet.empty() )
@@ -59,7 +61,7 @@ void ValidateServers( TracePath& tracePath, const std::vector< TransportConfigPt
                               std::stringstream ss;
                               ss << "ip address " << serverPtr->GetAddress().to_string()
                                  << " intersected with any address on other server";
-                              throw InvalidValueException( td, ss.str() );
+                              throw InvalidValueException( tdServer, ss.str() );
                          }
 
                          const auto addrIt = std::find( addressSet.begin(), addressSet.end(), serverPtr->GetAddress() );
@@ -68,7 +70,7 @@ void ValidateServers( TracePath& tracePath, const std::vector< TransportConfigPt
                               std::stringstream ss;
                               ss << "ip address " << serverPtr->GetAddress().to_string()
                                  << " intersected with ip address " << addrIt->to_string() << " on other server";
-                              throw InvalidValueException( td, ss.str() );
+                              throw InvalidValueException( tdServer, ss.str() );
                          }
 
                          addressSet.push_back( serverPtr->GetAddress() );
@@ -96,6 +98,7 @@ struct UnitIdRangeValidator
 {
      std::set< UnitIdRange, UnitIdRangeComparator > unitIdSet;
      bool defaultUnitIdsClient = false;
+     modbus::UnitId unitIdCounter = 0;
 
      void Insert( TraceDeep& traceDeep, const std::vector< UnitIdRange >& unitIdRanges )
      {
@@ -123,6 +126,25 @@ struct UnitIdRangeValidator
                        << " intersected with unit id range on other client";
                     throw InvalidValueException( traceDeep, ss.str() );
                }
+               if( unitIdRange.begin == unitIdRange.end )
+               {
+                    ++unitIdCounter;
+               }
+               else
+               {
+                    unitIdCounter += ( unitIdRange.end - unitIdRange.begin );
+               }
+          }
+     }
+
+     void CheckCoverage( TraceDeep& traceDeep ) const
+     {
+          if( unitIdCounter < ( modbus::unitIdMax - modbus::unitIdMin ) && !defaultUnitIdsClient )
+          {
+               std::stringstream ss;
+               ss << "unit id for all clients not coverage all supported unit id (" << modbus::unitIdMin << "-"
+                  << modbus::unitIdMax << "), set default client";
+               throw InvalidValueException( traceDeep, ss.str() );
           }
      }
 };
@@ -135,10 +157,12 @@ void ValidateClients( TracePath& tracePath, const std::vector< TransportConfigPt
      std::map< asio::ip::port_type, AddressSet > tcpClientEnpoints;
      UnitIdRangeValidator unitIdRangeValidator;
 
+     TraceDeep td( tracePath, "clients" );
+
      size_t index = 0;
      for( const auto& client: clients )
      {
-          TraceDeep td( tracePath, std::to_string( index ) );
+          TraceDeep tdClient( td.GetTracePath(), std::to_string( index ) );
           switch( client->GetType() )
           {
                case TCP:
@@ -152,14 +176,14 @@ void ValidateClients( TracePath& tracePath, const std::vector< TransportConfigPt
                     {
                          std::stringstream ss;
                          ss << "any ip address don't allow for client";
-                         throw InvalidValueException( td, ss.str() );
+                         throw InvalidValueException( tdClient, ss.str() );
                     }
 
                     auto it = tcpClientEnpoints.find( clientPtr->GetPort() );
                     if( it == tcpClientEnpoints.end() )
                     {
                          tcpClientEnpoints[ clientPtr->GetPort() ] = AddressSet { clientPtr->GetAddress() };
-                         unitIdRangeValidator.Insert( td, clientPtr->GetUnitIds() );
+                         unitIdRangeValidator.Insert( tdClient, clientPtr->GetUnitIds() );
                     }
                     else
                     {
@@ -171,11 +195,11 @@ void ValidateClients( TracePath& tracePath, const std::vector< TransportConfigPt
                               std::stringstream ss;
                               ss << "ip address " << clientPtr->GetAddress().to_string()
                                  << " intersected with ip address " << addrIt->to_string() << " on other client";
-                              throw InvalidValueException( td, ss.str() );
+                              throw InvalidValueException( tdClient, ss.str() );
                          }
 
                          addressSet.push_back( clientPtr->GetAddress() );
-                         unitIdRangeValidator.Insert( td, clientPtr->GetUnitIds() );
+                         unitIdRangeValidator.Insert( tdClient, clientPtr->GetUnitIds() );
                     }
                }
                     break;
@@ -183,6 +207,8 @@ void ValidateClients( TracePath& tracePath, const std::vector< TransportConfigPt
                     throw std::logic_error( "unknown server type" );
           }
      }
+
+     unitIdRangeValidator.CheckCoverage( td );
 }
 
 }

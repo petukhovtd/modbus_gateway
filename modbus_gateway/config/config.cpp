@@ -16,7 +16,7 @@ Config::Config( std::istream& in )
 : data_( json::parse( in ) )
 {
      TracePath tracePath;
-     tracePath.Push( "root" );
+     tracePath.Push( "config" );
 
      {
           const auto& res = ExtractLogLevel( tracePath, data_ );
@@ -51,7 +51,7 @@ const std::vector< TransportConfigPtr >& Config::GetClients() const
 void Config::Validate() const
 {
      TracePath tracePath;
-     tracePath.Push( "root" );
+     tracePath.Push( "config" );
 
      ValidateServers( tracePath, servers_ );
      ValidateClients( tracePath, clients_ );

@@ -6,6 +6,7 @@
 
 #include <types.h>
 #include <modbus_tcp_connection.h>
+#include <i_modbus_slave.h>
 
 #include <unordered_map>
 #include <memory>
@@ -15,7 +16,8 @@ namespace modbus_gateway
 {
 
 class ModbusTcpServer final
-          : public exchange::ActorHelper< ModbusTcpServer >
+          : public exchange::ActorHelper< ModbusTcpServer >,
+          public IModbusSlave
 {
      using TcpClientPtr = std::shared_ptr< ModbusTcpConnection >;
      using ClientDb = std::unordered_map< exchange::ActorId, TcpClientPtr >;
@@ -24,7 +26,7 @@ public:
 
      void Receive( const exchange::MessagePtr& message ) override;
 
-     void Start();
+     void Start() override;
 
      void Stop();
 

@@ -11,7 +11,8 @@ namespace modbus_gateway
 
 ModbusTcpServer::ModbusTcpServer( const ContextPtr& context, const asio::ip::address& addr, ip::port_type port,
                                   RouterPtr router )
-: acceptor_( *context, TcpEndpoint( addr, port ) )
+: IModbusSlave( TransportType::TCP )
+, acceptor_( *context, TcpEndpoint( addr, port ) )
 , router_( std::move( router ) )
 {
      assert( router_ );

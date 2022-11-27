@@ -113,7 +113,7 @@ TEST( ConfigTest, ValidateClientTest )
           std::make_shared< mg::TcpClientConfig >( asio::ip::make_address_v4( "127.0.0.1" ), 502,
                                                    UnitIdRanges { mg::UnitIdRange( 1 ) } ),
           std::make_shared< mg::TcpClientConfig >( asio::ip::make_address_v4( "127.0.0.2" ), 502,
-                                                   UnitIdRanges { mg::UnitIdRange( 2 ) } ),
+                                                   UnitIdRanges { mg::UnitIdRange( 2, 247 ) } ),
           };
           mg::TracePath tracePath;
           EXPECT_NO_THROW( mg::ValidateClients( tracePath, clients ) );
@@ -133,7 +133,7 @@ TEST( ConfigTest, ValidateClientTest )
           std::make_shared< mg::TcpClientConfig >( asio::ip::make_address_v4( "127.0.0.1" ), 502,
                                                    UnitIdRanges { mg::UnitIdRange( 1 ) } ),
           std::make_shared< mg::TcpClientConfig >( asio::ip::make_address_v4( "127.0.0.1" ), 502,
-                                                   UnitIdRanges { mg::UnitIdRange( 2 ) } ),
+                                                   UnitIdRanges { mg::UnitIdRange( 2, 247 ) } ),
           };
           mg::TracePath tracePath;
           EXPECT_THROW( mg::ValidateClients( tracePath, clients ), mg::InvalidValueException );

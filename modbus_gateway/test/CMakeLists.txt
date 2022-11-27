@@ -28,5 +28,6 @@ target_link_libraries(
           gtest
           gtest_main
           ${LIBS}
+          libmodbus_gateway
 )
 

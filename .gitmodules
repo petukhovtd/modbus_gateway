@@ -13,3 +13,6 @@
 [submodule "contrib/json"]
 	path = contrib/json
 	url = git@github.com:nlohmann/json.git
+[submodule "contrib/cxxopts"]
+	path = contrib/cxxopts
+	url = git@github.com:jarro2783/cxxopts.git
