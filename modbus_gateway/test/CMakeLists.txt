@@ -1,4 +1,4 @@
-set(TEST_TARGET test)
+project(unit-test)
 
 set(SOURCES_TEST
           modbus_common.cpp
@@ -21,13 +21,10 @@ set(SOURCES_TEST
           modbus_gateway/test_unit_id_range.cpp
 )
 
-add_executable(${TEST_TARGET} ${SOURCES_TEST})
-
-target_link_libraries(
-          ${TEST_TARGET}
+add_executable(${PROJECT_NAME} ${SOURCES_TEST})
+target_link_libraries(${PROJECT_NAME} PRIVATE
           gtest
           gtest_main
-          ${LIBS}
           libmodbus_gateway
 )
 

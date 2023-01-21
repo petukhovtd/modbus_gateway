@@ -1,6 +1,5 @@
-include_directories(modbus/include)
-
-set(MODBUS_GATEWAY_SOURCE
+set(${PROJECT_NAME}_LIBS pthread exchange spdlog modbus asio nlohmann_json cxxopts)
+set(${PROJECT_NAME}_SOURCE
           common/fmt_logger.cpp
 
           config/config.cpp
@@ -33,14 +32,18 @@ set(MODBUS_GATEWAY_SOURCE
           router.cpp
 
           modbus_gateway.cpp
-)
+          )
 
-add_library(lib${PROJECT_NAME} STATIC ${MODBUS_GATEWAY_SOURCE})
+add_subdirectory(modbus)
+add_subdirectory(test)
 
-add_executable(${PROJECT_NAME} main.cpp ${MODBUS_GATEWAY_SOURCE})
 
-include_directories(${PROJECT_NAME} PRIVATE .)
+add_library(lib${PROJECT_NAME} ${${PROJECT_NAME}_SOURCE})
+target_include_directories(lib${PROJECT_NAME} PUBLIC .)
+target_link_libraries(lib${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_LIBS})
 
+add_executable(${PROJECT_NAME} main.cpp ${${PROJECT_NAME}_SOURCE})
+target_include_directories(${PROJECT_NAME} PRIVATE .)
 target_compile_options(${PROJECT_NAME} PRIVATE
           -Wall
           -Werror
@@ -51,10 +54,4 @@ target_compile_options(${PROJECT_NAME} PRIVATE
           -Wno-unused-parameter
           -Wno-uninitialized
 )
-
-set(LIBS pthread exchange spdlog modbus)
-
-target_link_libraries(${PROJECT_NAME} ${LIBS})
-
-add_subdirectory(modbus)
-add_subdirectory(test)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_LIBS})

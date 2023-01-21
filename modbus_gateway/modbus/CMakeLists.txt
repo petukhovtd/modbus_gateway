@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 2.4)
 project(modbus)
 
 set(MODBUS_SOURCE
@@ -13,7 +12,7 @@ set(MODBUS_SOURCE
 
 add_library(${PROJECT_NAME} STATIC ${MODBUS_SOURCE})
 
-target_include_directories(${PROJECT_NAME} PRIVATE include)
+target_include_directories(${PROJECT_NAME} PUBLIC include)
 
 target_compile_options(${PROJECT_NAME} PRIVATE
           -Wall
