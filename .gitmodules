@@ -16,3 +16,6 @@
 [submodule "contrib/cxxopts"]
 	path = contrib/cxxopts
 	url = git@github.com:jarro2783/cxxopts.git
+[submodule "contrib/modbus"]
+	path = contrib/modbus
+	url = git@github.com:petukhovtd/modbus.git

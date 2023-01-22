@@ -34,7 +34,6 @@ set(${PROJECT_NAME}_SOURCE
           modbus_gateway.cpp
           )
 
-add_subdirectory(modbus)
 add_subdirectory(test)
 
 
