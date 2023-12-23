@@ -9,4 +9,3 @@ add_subdirectory(googletest)
 add_subdirectory(json)
 add_subdirectory(modbus)
 add_subdirectory(spdlog)
-
