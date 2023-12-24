@@ -10,6 +10,14 @@ add_subdirectory(contrib)
 set(SOURCE
         src/common/fmt_logger.cpp
         src/main.cpp
+
+        src/message/modbus_message_info.cpp
+        src/message/modbus_message.cpp
+        src/message/client_disconnect_message.cpp
+
+        src/transport/router.cpp
+        src/transport/modbus_tcp_connection.cpp
+        src/transport/modbus_tcp_server.cpp
 )
 
 message(${SOURCE})
@@ -19,5 +27,8 @@ add_executable(${PROJECT_NAME} ${SOURCE})
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    spdlog
+        spdlog
+        modbus
+        exchange
+        asio
 )
