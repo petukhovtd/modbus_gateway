@@ -8,21 +8,21 @@
 namespace modbus_gateway {
 
 class ModbusMessage
-        : public exchange::MessageHelper<ModbusMessage> {
+    : public exchange::MessageHelper<ModbusMessage> {
 public:
-    ModbusMessage(const ModbusMessageInfo &modbusMessageInfo, const ModbusBufferPtr &modbusBuffer);
+  ModbusMessage(const ModbusMessageInfo &modbusMessageInfo, const ModbusBufferPtr &modbusBuffer);
 
-    ~ModbusMessage() override = default;
+  ~ModbusMessage() override = default;
 
-    const ModbusMessageInfo &GetModbusMessageInfo() const;
+  const ModbusMessageInfo &GetModbusMessageInfo() const;
 
-    const ModbusBufferPtr &GetModbusBuffer() const;
+  const ModbusBufferPtr &GetModbusBuffer() const;
 
 private:
-    ModbusMessageInfo modbusMessageInfo_;
-    ModbusBufferPtr modbusBuffer_;
+  ModbusMessageInfo modbusMessageInfo_;
+  ModbusBufferPtr modbusBuffer_;
 };
 
 using ModbusMessagePtr = std::shared_ptr<ModbusMessage>;
 
-}
+}// namespace modbus_gateway

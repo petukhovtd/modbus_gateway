@@ -3,10 +3,10 @@
 namespace modbus_gateway {
 
 ClientDisconnectMessage::ClientDisconnectMessage(exchange::ActorId clientId)
-        : clientId_(clientId) {}
+    : clientId_(clientId) {}
 
 exchange::ActorId ClientDisconnectMessage::GetClientId() const {
-    return clientId_;
+  return clientId_;
 }
 
-}
+}// namespace modbus_gateway

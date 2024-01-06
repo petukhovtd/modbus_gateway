@@ -9,27 +9,27 @@
 namespace modbus_gateway {
 
 class ModbusMessageInfo {
-    using TargetClock = std::chrono::steady_clock;
+  using TargetClock = std::chrono::steady_clock;
 
 public:
-    ModbusMessageInfo(exchange::ActorId sourceId, modbus::TransactionId transactionId);
+  ModbusMessageInfo(exchange::ActorId sourceId, modbus::TransactionId transactionId);
 
-    virtual ~ModbusMessageInfo() = default;
+  virtual ~ModbusMessageInfo() = default;
 
-    bool TimeoutReached(std::chrono::nanoseconds timeout) const;
+  bool TimeoutReached(std::chrono::nanoseconds timeout) const;
 
-    exchange::ActorId GetSourceId() const;
+  exchange::ActorId GetSourceId() const;
 
-    modbus::TransactionId GetTransactionId() const;
-
-private:
-    static std::chrono::nanoseconds GetCurrentTimestamp();
+  modbus::TransactionId GetTransactionId() const;
 
 private:
-    std::chrono::nanoseconds createTimeStamp_;
-    mutable bool timeoutReached_;
-    exchange::ActorId sourceId_;
-    modbus::TransactionId transactionId_;
+  static std::chrono::nanoseconds GetCurrentTimestamp();
+
+private:
+  std::chrono::nanoseconds createTimeStamp_;
+  mutable bool timeoutReached_;
+  exchange::ActorId sourceId_;
+  modbus::TransactionId transactionId_;
 };
 
-}
+}// namespace modbus_gateway

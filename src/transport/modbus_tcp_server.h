@@ -7,40 +7,44 @@
 #include <exchange/actor_helper.h>
 #include <exchange/iexchange.h>
 
-#include <unordered_map>
 #include <memory>
 #include <mutex>
+#include <unordered_map>
 
 namespace modbus_gateway {
 
 class ModbusTcpServer final : public exchange::ActorHelper<ModbusTcpServer> {
-    using TcpClientPtr = std::shared_ptr<ModbusTcpConnection>;
-    using ClientDb = std::unordered_map<exchange::ActorId, TcpClientPtr>;
+  using TcpClientPtr = std::shared_ptr<ModbusTcpConnection>;
+  using ClientDb = std::unordered_map<exchange::ActorId, TcpClientPtr>;
+
 public:
-    ModbusTcpServer(const exchange::ExchangePtr &exchange, const ContextPtr &context, const asio::ip::address &addr,
-                    asio::ip::port_type port, const RouterPtr &router);
+  ModbusTcpServer(const exchange::ExchangePtr &exchange, const ContextPtr &context, const asio::ip::address &addr,
+                  asio::ip::port_type port, const RouterPtr &router);
 
-    void Receive(const exchange::MessagePtr &message) override;
+  void Receive(const exchange::MessagePtr &message) override;
 
-    void Start();
+  void SetId(exchange::ActorId id) override;
 
-    void Stop();
+  void ResetId() override;
 
-    ~ModbusTcpServer() override;
+  void Start();
 
-private:
-    void AcceptTask();
+  void Stop();
 
-    void ClientDisconnect(exchange::ActorId clientId);
-
-    const std::string &GetIdStr() const;
+  ~ModbusTcpServer() override;
 
 private:
-    exchange::ExchangePtr exchange_;
-    TcpAcceptor acceptor_;
-    RouterPtr router_;
-    std::mutex mutex_;
-    ClientDb clientDb_;
+  void AcceptTask();
+
+  void ClientDisconnect(exchange::ActorId clientId);
+
+private:
+  std::atomic<exchange::ActorId> id_;
+  exchange::ExchangePtr exchange_;
+  TcpAcceptor acceptor_;
+  RouterPtr router_;
+  std::mutex mutex_;
+  ClientDb clientDb_;
 };
 
-}
+}// namespace modbus_gateway
