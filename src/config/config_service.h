@@ -10,7 +10,7 @@ namespace modbus_gateway {
 
 struct ConfigService {
   ConfigService() = default;
-  ConfigService(TracePath &tp, const nlohmann::json::value_t &data);
+  ConfigService(TracePath &tp, const nlohmann::json::value_type &data);
 
   Logger::LogLevel logLevel = Logger::LogLevel::Info;
   size_t threads = 1;

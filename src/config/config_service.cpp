@@ -4,7 +4,7 @@
 
 namespace modbus_gateway {
 
-ConfigService::ConfigService(TracePath &tp, const nlohmann::json::value_t &data) {
+ConfigService::ConfigService(TracePath &tp, const nlohmann::json::value_type &data) {
   auto logLevelOpt = ExtractLogLevel(tp, data);
   if (logLevelOpt.has_value()) {
     logLevel = logLevelOpt.value();

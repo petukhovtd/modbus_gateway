@@ -20,12 +20,14 @@ set(SOURCE
         config/invalid_type_exception.cpp
         config/invalid_value_exception.cpp
         config/convertors.cpp
+        config/unit_id_range.cpp
         config/extractor.cpp
         config/config_service.cpp
         config/i_transport_config.cpp
         config/tcp_server_config.cpp
         config/rtu_slave_config.cpp
-        #        config/tcp_client_config.cpp
+        config/tcp_client_config.cpp
+        config/rtu_maser_config.cpp
         config/config.cpp
 )
 

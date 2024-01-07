@@ -9,14 +9,16 @@
 
 #include "nlohmann/json.hpp"
 
-#include <string>
 #include <chrono>
+#include <string>
 
 namespace modbus_gateway {
 
-struct RtuSlaveConfig: public ITransportConfig {
+struct RtuSlaveConfig : public ITransportConfig {
 
-  RtuSlaveConfig(TracePath& tracePath, const nlohmann::json::value_type& obj,modbus::FrameType frameType);
+  RtuSlaveConfig(TracePath &tracePath, const nlohmann::json::value_type &obj, modbus::FrameType frameType);
+
+  ~RtuSlaveConfig() override = default;
 
   std::string device{};
   RtuOptions rtuOptions{};
@@ -25,7 +27,6 @@ struct RtuSlaveConfig: public ITransportConfig {
 
 private:
   modbus::FrameType frameType_;
-
 };
 
 }// namespace modbus_gateway

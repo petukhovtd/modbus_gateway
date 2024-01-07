@@ -18,6 +18,7 @@ set(SOURCE
         test_modbus_tcp_client.cpp
         test_modbus_rtu_slave.cpp
         test_modbus_rtu_master.cpp
+        test_config.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE})

@@ -9,10 +9,10 @@ TcpServerConfig::TcpServerConfig(TracePath &tracePath, const nlohmann::json::val
 
   const auto addrOpt = ExtractIpAddressOptional(tracePath, obj);
   if (addrOpt.has_value()) {
-    address_ = addrOpt.value();
+    address = addrOpt.value();
   }
 
-  port_ = ExtractIpPort(tracePath, obj);
+  port = ExtractIpPort(tracePath, obj);
 }
 
 }// namespace modbus_gateway

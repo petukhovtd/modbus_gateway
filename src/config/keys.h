@@ -16,6 +16,7 @@ const std::string threads = "threads";
 
 // common
 const std::string frame_type = "frame_type";
+const std::string timeout = "timeout_ms";
 
 // tcp
 const std::string ipAddress = "ip_address";

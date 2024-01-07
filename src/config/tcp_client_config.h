@@ -2,31 +2,24 @@
 
 #include <config/i_transport_config.h>
 #include <config/trace_path.h>
-#include <config/modbus_client_config.h>
+#include <config/unit_id_range.h>
+
+#include <common/types_asio.h>
 
 #include <nlohmann/json.hpp>
 
-namespace modbus_gateway
-{
+namespace modbus_gateway {
 
-class TcpClientConfig: public ITransportConfig, public ModbusClientConfig
-{
+struct TcpClientConfig : public ITransportConfig {
 public:
-     explicit TcpClientConfig( TracePath& tracePath, const nlohmann::json::value_type& obj );
+  TcpClientConfig(TracePath &tracePath, const nlohmann::json::value_type &obj);
 
-     explicit TcpClientConfig( const asio::ip::address& address, asio::ip::port_type port,
-                               const std::vector< UnitIdRange >& unitidRanges );
+  ~TcpClientConfig() override = default;
 
-     ~TcpClientConfig() override = default;
-
-     const asio::ip::address& GetAddress() const;
-
-     asio::ip::port_type GetPort() const;
-
-private:
-     asio::ip::address address_;
-     asio::ip::port_type port_;
-
+  asio::ip::address address = asio::ip::address_v4::any();
+  asio::ip::port_type port = 502;
+  std::chrono::milliseconds timeout = std::chrono::milliseconds(1000);
+  std::vector<UnitIdRange> unitIdSet{};
 };
 
-}
+}// namespace modbus_gateway

@@ -4,7 +4,9 @@
 #include <config/keys.h>
 
 #include <config/config_service.h>
+#include <config/rtu_maser_config.h>
 #include <config/rtu_slave_config.h>
+#include <config/tcp_client_config.h>
 #include <config/tcp_server_config.h>
 
 #include <nlohmann/json.hpp>
@@ -16,7 +18,7 @@ nlohmann::json::value_type::const_iterator FindObjectRaw(const TraceDeep &td, co
 }
 
 const nlohmann::json::value_type &FindObject(const TraceDeep &td, const nlohmann::json::value_type &obj) {
-  const auto &it = FindObjectRaw(td, obj);
+  const auto it = FindObjectRaw(td, obj);
   if (obj.end() == it) {
     throw KeyNotFoundException(td);
   }
@@ -178,6 +180,52 @@ RtuOptions ExtractRtuOptions(TracePath &tracePath, const nlohmann::json::value_t
   return rtuOptions;
 }
 
+NumericRangeType ExtractNumericRangeType(TracePath &tracePath, const nlohmann::json::value_type &obj) {
+  TraceDeep td(tracePath, keys::numericRangeType);
+
+  const auto value = ExtractString(tracePath, obj, td.GetKey());
+  const auto convertValue = ConvertNumericRangeType(value);
+  if (!convertValue.has_value()) {
+    throw InvalidValueException(td, value);
+  }
+  return convertValue.value();
+}
+
+modbus::UnitId ExtractModbusUnitId(TracePath &tracePath, const nlohmann::json::value_type &obj, const std::string &key) {
+  const auto unitId = ExtractUnsignedNumber<modbus::UnitId>(tracePath, obj, key);
+  if (unitId < modbus::unitIdMin || unitId > modbus::unitIdMax) {
+    TraceDeep td(tracePath, key);
+    throw InvalidValueException(td, std::to_string(unitId));
+  }
+  return unitId;
+}
+
+std::optional<std::vector<UnitIdRange>> ExtractUnitIdRangeSet(TracePath &tracePath, const nlohmann::json::value_type &obj) {
+  TraceDeep td(tracePath, keys::unitIdSet);
+
+  const auto &it = FindObjectRaw(td, obj);
+  if (obj.end() == it) {
+    return std::nullopt;
+  }
+  const auto &unitIds = *it;
+  CheckType(td, unitIds, ValueType::Array);
+
+  if (unitIds.empty()) {
+    throw InvalidValueException(td, keys::unitIdSet + " empty");
+  }
+
+  size_t index = 0;
+  std::vector<UnitIdRange> result;
+  result.reserve(unitIds.size());
+  for (const auto &unitIdRange : unitIds) {
+    TraceDeep tdUnitIdRange(td.GetTracePath(), std::to_string(index));
+    result.emplace_back(tdUnitIdRange.GetTracePath(), unitIdRange);
+    ++index;
+  }
+
+  return result;
+}
+
 TransportConfigPtr ExtractSlave(TracePath &tracePath, const nlohmann::json::value_type &obj) {
   auto frameType = ExtractFrameType(tracePath, obj);
   switch (frameType) {
@@ -213,71 +261,14 @@ std::vector<TransportConfigPtr> ExtractSlaves(TracePath &tracePath, const nlohma
   return result;
 }
 
-//modbus::UnitId ExtractModbusUnitId( TracePath& tracePath, const nlohmann::json::value_type& obj, const std::string& key )
-//{
-//     const auto unitId = ExtractUnsignedNumber< modbus::UnitId >( tracePath, obj, key );
-//     if( unitId < modbus::unitIdMin || unitId > modbus::unitIdMax )
-//     {
-//          TraceDeep td( tracePath, key );
-//          throw InvalidValueException( td, std::to_string( unitId ) );
-//     }
-//     return unitId;
-//}
-//
-//NumericRangeType ExtractNumericRangeType( TracePath& tracePath, const nlohmann::json::value_type& obj )
-//{
-//     TraceDeep td( tracePath, keys::numericRangeType );
-//
-//     const auto& val = FindObject( td, obj );
-//     CheckType( td, val, ValueType::String );
-//
-//     const auto value = val.get< std::string >();
-//     const auto convertValue = ConvertNumericRangeType( value );
-//     if( !convertValue.has_value() )
-//     {
-//          throw InvalidValueException( td, value );
-//     }
-//     return convertValue.value();
-//}
-//
-//std::optional< std::vector< UnitIdRange > > ExtractUnitIdRangeSet( TracePath& tracePath, const nlohmann::json::value_type& obj )
-//{
-//     TraceDeep td( tracePath, keys::unitIdSet );
-//
-//     const auto& it = obj.find( keys::unitIdSet );
-//     if( obj.end() == it )
-//     {
-//          return std::nullopt;
-//     }
-//     const auto& unitIds = *it;
-//     CheckType( td, unitIds, ValueType::Array );
-//
-//     if( unitIds.empty() )
-//     {
-//          throw InvalidValueException( td, keys::unitIdSet + " empty" );
-//     }
-//
-//     size_t index = 0;
-//     std::vector< UnitIdRange > result;
-//     result.reserve( unitIds.size() );
-//     for( const auto& unitIdRange: unitIds )
-//     {
-//          TraceDeep tdUnitIdRange( td.GetTracePath(), std::to_string( index ) );
-//          result.emplace_back( tdUnitIdRange.GetTracePath(), unitIdRange );
-//          ++index;
-//     }
-//
-//     return result;
-//}
-//
 TransportConfigPtr ExtractMaster(TracePath &tracePath, const nlohmann::json::value_type &obj) {
   auto frameType = ExtractFrameType(tracePath, obj);
   switch (frameType) {
-    //  case modbus::TCP:
-    //    return std::make_shared<TcpClientConfig>(tracePath, obj);
-    //  case modbus::RTU:
-    //  case modbus::ASCII:
-    //    return std::make_shared<RtuMasterConfig>(tracePath, obj);
+  case modbus::TCP:
+    return std::make_shared<TcpClientConfig>(tracePath, obj);
+  case modbus::RTU:
+  case modbus::ASCII:
+    return std::make_shared<RtuMasterConfig>(tracePath, obj, frameType);
   default:
     throw std::logic_error("unimplemented frame type");
   }

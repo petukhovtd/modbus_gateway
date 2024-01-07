@@ -1,34 +1,18 @@
-#include <config/tcp_client_config.h>
 #include <config/extractor.h>
+#include <config/keys.h>
+#include <config/tcp_client_config.h>
 
-namespace modbus_gateway
-{
-TcpClientConfig::TcpClientConfig( TracePath& tracePath, const nlohmann::json::value_type& obj )
-: ITransportConfig( TransportType::TCP )
-, ModbusClientConfig( tracePath, obj )
-, address_( ExtractIpAddress( tracePath, obj ) )
-, port_( ExtractIpPort( tracePath, obj ) )
-{}
+namespace modbus_gateway {
+TcpClientConfig::TcpClientConfig(TracePath &tracePath, const nlohmann::json::value_type &obj)
+    : ITransportConfig(ITransportConfig::Type::TcpClient) {
+  address = ExtractIpAddress(tracePath, obj);
+  port = ExtractIpPort(tracePath, obj);
+  timeout = std::chrono::milliseconds(ExtractUnsignedNumber<size_t>(tracePath, obj, keys::timeout));
 
-TcpClientConfig::TcpClientConfig( const asio::ip::address& address, asio::ip::port_type port,
-                                  const std::vector< UnitIdRange >& unitIdRanges )
-: ITransportConfig( TransportType::TCP )
-, ModbusClientConfig( unitIdRanges )
-, address_( address )
-, port_( port )
-{
-
+  const auto unitIdSetOpt = ExtractUnitIdRangeSet(tracePath, obj);
+  if (unitIdSetOpt.has_value()) {
+    unitIdSet = unitIdSetOpt.value();
+  }
 }
 
-const asio::ip::address& TcpClientConfig::GetAddress() const
-{
-     return address_;
-}
-
-asio::ip::port_type TcpClientConfig::GetPort() const
-{
-     return port_;
-}
-
-
-}
+}// namespace modbus_gateway

@@ -1,9 +1,11 @@
 #pragma once
 
+#include <config/config_types.h>
 #include <config/i_transport_config.h>
 #include <config/invalid_value_exception.h>
 #include <config/key_not_found_exception.h>
 #include <config/trace_deep.h>
+#include <config/unit_id_range.h>
 #include <config/value_type.h>
 
 #include <common/logger.h>
@@ -89,12 +91,12 @@ asio::ip::address ExtractIpAddress(TracePath &tracePath, const nlohmann::json::v
 asio::ip::port_type ExtractIpPort(TracePath &tracePath, const nlohmann::json::value_type &obj);
 
 RtuOptions ExtractRtuOptions(TracePath &tracePath, const nlohmann::json::value_type &obj);
-//
-//modbus::UnitId ExtractModbusUnitId( TracePath& tracePath, const nlohmann::json::value_type& obj, const std::string& key );
-//
-//NumericRangeType ExtractNumericRangeType( TracePath& tracePath, const nlohmann::json::value_type& obj );
-//
-//std::optional< std::vector< UnitIdRange > > ExtractUnitIdRangeSet( TracePath& tracePath, const nlohmann::json::value_type& obj );
+
+NumericRangeType ExtractNumericRangeType(TracePath &tracePath, const nlohmann::json::value_type &obj);
+
+modbus::UnitId ExtractModbusUnitId(TracePath &tracePath, const nlohmann::json::value_type &obj, const std::string &key);
+
+std::optional<std::vector<UnitIdRange>> ExtractUnitIdRangeSet(TracePath &tracePath, const nlohmann::json::value_type &obj);
 
 TransportConfigPtr ExtractSlave(TracePath &tracePath, const nlohmann::json::value_type &obj);
 

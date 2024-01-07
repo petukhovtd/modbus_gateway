@@ -14,8 +14,8 @@ public:
 
   ~TcpServerConfig() override = default;
 
-  asio::ip::address address_ = asio::ip::address_v4::any();
-  asio::ip::port_type port_ = 502;
+  asio::ip::address address = asio::ip::address_v4::any();
+  asio::ip::port_type port = 502;
 };
 
 }// namespace modbus_gateway

@@ -1,30 +1,19 @@
-#ifndef MODBUS_GATEWAY_UNIT_ID_RANGE_H
-#define MODBUS_GATEWAY_UNIT_ID_RANGE_H
+#pragma once
 
 #include <config/trace_deep.h>
 #include <modbus/modbus_types.h>
 
 #include <nlohmann/json.hpp>
 
-namespace modbus_gateway
-{
+namespace modbus_gateway {
 
-struct UnitIdRange
-{
-     modbus::UnitId begin;
-     modbus::UnitId end;
+struct UnitIdRange {
+  UnitIdRange(TracePath &tracePath, const nlohmann::json::value_type &obj);
 
-     UnitIdRange( TracePath& tracePath, const nlohmann::json::value_type& obj );
+  void Normalize();
 
-     UnitIdRange( modbus::UnitId begin, modbus::UnitId end );
-
-     explicit  UnitIdRange( modbus::UnitId value );
-
-     void Normalize();
+  modbus::UnitId begin{0};
+  modbus::UnitId end{0};
 };
 
-void CompressUnitIdRanges( std::vector< UnitIdRange >& unitIds );
-
-}
-
-#endif //MODBUS_GATEWAY_UNIT_ID_RANGE_H
+}// namespace modbus_gateway

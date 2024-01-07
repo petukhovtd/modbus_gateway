@@ -75,17 +75,15 @@ std::optional<asio::serial_port_base::flow_control::type> ConvertFlowControl(con
   }
   return std::nullopt;
 }
-//std::optional< NumericRangeType > ConvertNumericRangeType( const std::string& numericRangeType )
-//{
-//     if( "range" == numericRangeType )
-//     {
-//          return NumericRangeType::Range;
-//     }
-//     if( "value" == numericRangeType )
-//     {
-//          return NumericRangeType::Value;
-//     }
-//     return std::nullopt;
-//}
+
+std::optional<NumericRangeType> ConvertNumericRangeType(const std::string &numericRangeType) {
+  if ("range" == numericRangeType) {
+    return NumericRangeType::Range;
+  }
+  if ("value" == numericRangeType) {
+    return NumericRangeType::Value;
+  }
+  return std::nullopt;
+}
 
 }// namespace modbus_gateway
