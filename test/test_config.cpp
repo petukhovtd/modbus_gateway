@@ -12,7 +12,7 @@
 
 #include <sstream>
 
-TEST(ConfigTest, ParsingExample) {
+TEST(ConfigTest, ParsingExampleTest) {
   std::stringstream is;
   is << R"(
 {
@@ -121,11 +121,47 @@ TEST(ConfigTest, ParsingExample) {
   std::optional<modbus_gateway::Config> config;
   ASSERT_NO_THROW(config = modbus_gateway::Config(is));
   ASSERT_TRUE(config);
-  EXPECT_NO_THROW(config->Validate());
   EXPECT_EQ(config->configService.logLevel, modbus_gateway::Logger::LogLevel::Error);
   EXPECT_EQ(config->configService.threads, 5);
   EXPECT_EQ(config->slaves.size(), 4);
   EXPECT_EQ(config->masters.size(), 4);
+  EXPECT_NO_THROW(config->Validate());
+}
+
+TEST(ConfigTest, ManyDefaultsTest) {
+  std::stringstream is;
+  is << R"(
+{
+  "service": {
+  },
+  "slaves": [
+    {
+      "frame_type": "tcp",
+      "ip_address": "192.168.1.2",
+      "ip_port": 503
+    }
+  ],
+  "masters": [
+    {
+      "frame_type": "tcp",
+      "timeout_ms": 1000,
+      "ip_address": "192.168.2.2",
+      "ip_port": 502
+    },
+    {
+      "frame_type": "rtu",
+      "timeout_ms": 1000,
+      "device": "/dev/ttyUSB0"
+    }
+  ]
+}
+)";
+  std::optional<modbus_gateway::Config> config;
+  ASSERT_NO_THROW(config = modbus_gateway::Config(is));
+  ASSERT_TRUE(config);
+  EXPECT_EQ(config->slaves.size(), 1);
+  EXPECT_EQ(config->masters.size(), 2);
+  EXPECT_THROW(config->Validate(), modbus_gateway::InvalidValueException);
 }
 
 TEST(ConfigTest, ServiceSectionTest) {
