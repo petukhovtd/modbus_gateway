@@ -1,32 +1,31 @@
 #pragma once
 
+#include <common/synchronized.h>
 #include <common/types_asio.h>
 #include <common/types_modbus.h>
-#include <common/synchronized.h>
-#include <transport/irouter.h>
-#include <transport/rtu_options.h>
 #include <message/modbus_message.h>
 #include <message/modbus_message_info.h>
+#include <transport/irouter.h>
+#include <transport/rtu_options.h>
 
 #include <exchange/actor_helper.h>
 #include <exchange/iexchange.h>
 
-#include <modbus/modbus_types.h>
 #include <modbus/modbus_buffer.h>
-#include <modbus/modbus_buffer_wrapper.h>
+#include <modbus/modbus_types.h>
 
 namespace modbus_gateway {
 
 class ModbusRtuSlave : public exchange::ActorHelper<ModbusRtuSlave> {
   using ModbusMessageInfoOpt = std::optional<ModbusMessageInfo>;
-public:
 
+public:
   ModbusRtuSlave(const exchange::ExchangePtr &exchange,
-                  const ContextPtr &context,
-                  const std::string &device,
-                  const RtuOptions &options,
-                  const RouterPtr &router,
-                  modbus::FrameType frameType);
+                 const ContextPtr &context,
+                 const std::string &device,
+                 const RtuOptions &options,
+                 const RouterPtr &router,
+                 modbus::FrameType frameType);
 
   ~ModbusRtuSlave() override;
 
@@ -50,8 +49,6 @@ private:
   void StartWriteTask(const ModbusMessagePtr &modbusMessage);
 
   ModbusBufferPtr MakeResponse(const ModbusMessagePtr &modbusMessage);
-
-  std::unique_ptr<modbus::IModbusBufferWrapper> MakeWrapper(modbus::ModbusBuffer &modbusBuffer);
 
 private:
   exchange::ActorId id_;

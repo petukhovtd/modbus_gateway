@@ -25,9 +25,9 @@ protected:
     auto context = contextRunner.GetContext();
 
     exchange = std::make_shared<exchange::Exchange>(std::make_unique<exchange::ActorStorageHT>());
-    messageActor = test::ModbusMessageActor::Create(exchange);
+    modbusMessageSender = test::ModbusMessageActor::Create(exchange);
 
-    const exchange::ActorId modbusEchoActorId = exchange->Add(messageActor);
+    const exchange::ActorId modbusEchoActorId = exchange->Add(modbusMessageSender);
     modbus_gateway::RouterPtr singleRouter = std::make_shared<test::SingleRouter>(modbusEchoActorId);
     tcpServer = modbus_gateway::ModbusTcpServer::Create(exchange, context, asio::ip::address(addr), port,
                                                         singleRouter);
@@ -48,7 +48,7 @@ protected:
   void Process(const test::ModbusMessageActor::Handler &handler,
                const modbus_gateway::ModbusBufferPtr &sendBuffer,
                const modbus_gateway::ModbusBufferPtr &receiveBuffer) {
-    messageActor->SetHandler(handler);
+    modbusMessageSender->SetHandler(handler);
     testConnection->Process(sendBuffer, receiveBuffer);
 
     std::this_thread::sleep_for(waitExchange);
@@ -60,7 +60,7 @@ protected:
 
   test::ContextRunner contextRunner = test::ContextRunner{1};
   exchange::ExchangePtr exchange = nullptr;
-  test::ModbusMessageActor::Ptr messageActor = nullptr;
+  test::ModbusMessageActor::Ptr modbusMessageSender = nullptr;
   modbus_gateway::ModbusTcpServer::Ptr tcpServer = nullptr;
   std::unique_ptr<test::TestModbusTcpClient> testConnection = nullptr;
 };

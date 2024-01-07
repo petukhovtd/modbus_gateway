@@ -2,19 +2,20 @@
 
 #include <common/context_runner.h>
 #include <common/misc.h>
+#include <common/rtu_creator.h>
 #include <common/modbus_message_sender.h>
-#include <common/test_modbus_tcp_server.h>
+#include <common/test_modbus_rtu_slave.h>
 
 #include <exchange/actor_storage_ht.h>
 #include <exchange/exchange.h>
 
-#include <modbus/modbus_buffer_tcp_wrapper.h>
+#include <modbus/modbus_buffer_rtu_wrapper.h>
 
-#include <transport/modbus_tcp_client.h>
+#include <transport/modbus_rtu_master.h>
 
 #include <thread>
 
-struct ModbusTcpClientTest : testing::Test {
+struct ModbusRtuMasterTest : testing::Test {
 protected:
   void SetUp() override {
     contextRunner.Run();
@@ -25,10 +26,10 @@ protected:
     modbusMessageSender = test::ModbusMessageSender::Create(exchange);
     const exchange::ActorId modbusMessageSenderId = exchange->Add(modbusMessageSender);
 
-    modbusRtuMaster = modbus_gateway::ModbusTcpClient::Create(exchange, context, addr, port, messageTimeout);
+    modbusRtuMaster = modbus_gateway::ModbusRtuMaster::Create(exchange, context, deviceIn, modbus_gateway::RtuOptions{}, messageTimeout, modbus::RTU);
     modbusRtuMasterId = exchange->Add(modbusRtuMaster);
 
-    testModbusRtuSlave = std::make_unique<test::TestModbusTcpServer>(context, addr, port);
+    testModbusRtuSlave = std::make_unique<test::TestModbusRtuSlave>(context, deviceOut, modbus::RTU);
     testModbusRtuSlave->Start();
   }
 
@@ -37,7 +38,7 @@ protected:
     contextRunner.Stop();
   }
 
-  modbus_gateway::ModbusMessagePtr Process(const test::TestModbusTcpServer::Handler &handler,
+  modbus_gateway::ModbusMessagePtr Process(const test::TestModbusRtuSlave::Handler &handler,
                                            const modbus_gateway::ModbusBufferPtr &sendBuffer) {
     testModbusRtuSlave->SetHandler(handler);
     modbusMessageSender->SendTo(sendBuffer, modbusRtuMasterId);
@@ -50,36 +51,24 @@ protected:
     return answer;
   }
 
-  const asio::ip::address_v4 addr = asio::ip::address_v4::loopback();
-  const asio::ip::port_type port = 1234;
+  const std::string deviceIn = test::deviceIn;
+  const std::string deviceOut = test::deviceOut;
   static constexpr auto waitExchange = std::chrono::milliseconds(2000);
   static constexpr auto messageTimeout = std::chrono::milliseconds(1000);
 
   test::ContextRunner contextRunner = test::ContextRunner{1};
   exchange::ExchangePtr exchange = nullptr;
   test::ModbusMessageSender::Ptr modbusMessageSender = nullptr;
-  modbus_gateway::ModbusTcpClient::Ptr modbusRtuMaster = nullptr;
+  modbus_gateway::ModbusRtuMaster::Ptr modbusRtuMaster = nullptr;
   exchange::ActorId modbusRtuMasterId = 0;
-  std::unique_ptr<test::TestModbusTcpServer> testModbusRtuSlave = nullptr;
+  std::unique_ptr<test::TestModbusRtuSlave> testModbusRtuSlave = nullptr;
 };
 
-TEST_F(ModbusTcpClientTest, ConnectAndSendTest) {
+TEST_F(ModbusRtuMasterTest, EchoTest) {
   {
-    static const modbus::AduBuffer tcpFrame = {0x0, 0x1, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4};
+    static const modbus::AduBuffer tcpFrame = {0x1, 0x6, 0xDF, 0x62, 0x38};
     auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
-        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::TCP));
-    const auto answer = Process([](modbus_gateway::ModbusBufferPtr &buffer) {
-      return buffer;
-    },
-                                sendBuffer);
-    ASSERT_TRUE(answer);
-    ASSERT_TRUE(answer->GetModbusBuffer());
-    EXPECT_TRUE(test::Compare(answer->GetModbusBuffer().operator*(), *sendBuffer));
-  }
-  {
-    static const modbus::AduBuffer tcpFrame = {0x0, 0x1, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4};
-    auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
-        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::TCP));
+        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::RTU));
     const auto answer = Process([](modbus_gateway::ModbusBufferPtr &buffer) {
       return buffer;
     },
@@ -90,11 +79,11 @@ TEST_F(ModbusTcpClientTest, ConnectAndSendTest) {
   }
 }
 
-TEST_F(ModbusTcpClientTest, TimeoutTest) {
+TEST_F(ModbusRtuMasterTest, TimeoutTest) {
   {// timeout
-    static const modbus::AduBuffer tcpFrame = {0x0, 0x1, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4};
+    static const modbus::AduBuffer tcpFrame = {0x1, 0x6, 0xDF, 0x62, 0x38};
     auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
-        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::TCP));
+        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::RTU));
     const auto answer = Process([](modbus_gateway::ModbusBufferPtr &buffer) {
       return nullptr;
     },
@@ -102,9 +91,9 @@ TEST_F(ModbusTcpClientTest, TimeoutTest) {
     ASSERT_FALSE(answer);
   }
   {// good
-    static const modbus::AduBuffer tcpFrame = {0x0, 0x1, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4};
+    static const modbus::AduBuffer tcpFrame = {0x1, 0x6, 0xDF, 0x62, 0x38};
     auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
-        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::TCP));
+        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::RTU));
     const auto answer = Process([](modbus_gateway::ModbusBufferPtr &buffer) {
       return buffer;
     },
@@ -115,37 +104,22 @@ TEST_F(ModbusTcpClientTest, TimeoutTest) {
   }
 }
 
-TEST_F(ModbusTcpClientTest, CheckResponse) {
-  {// invalid tr id
-    static const modbus::AduBuffer tcpFrame = {0x0, 0x1, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4};
+TEST_F(ModbusRtuMasterTest, CheckResponse) {
+  {// invalid crc
+    static const modbus::AduBuffer tcpFrame = {0x1, 0x6, 0xDF, 0x62, 0x38};
     auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
-        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::TCP));
+        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::RTU));
     const auto answer = Process([](modbus_gateway::ModbusBufferPtr &buffer) {
-      modbus::ModbusBufferTcpWrapper wrapper(*buffer);
-      auto id = wrapper.GetTransactionId();
-      wrapper.SetTransactionId(++id);
-      return buffer;
-    },
-                                sendBuffer);
-    ASSERT_FALSE(answer);
-  }
-  {// invalid frame
-    static const modbus::AduBuffer tcpFrame = {0x0, 0x1, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4};
-    auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
-        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::TCP));
-    const auto answer = Process([](modbus_gateway::ModbusBufferPtr &) {
-      const modbus::AduBuffer tcpFrame = {0x0, 0x1, 0x0, 0x1, 0x0, 0x3, 0x1, 0x3, 0x4};
-      auto buffer = std::make_shared<modbus::ModbusBuffer>(
-          test::MakeModbusBuffer(tcpFrame, modbus::FrameType::TCP));
+      ++ *buffer->begin().base();
       return buffer;
     },
                                 sendBuffer);
     ASSERT_FALSE(answer);
   }
   {// good
-    static const modbus::AduBuffer tcpFrame = {0x0, 0x1, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4};
+    static const modbus::AduBuffer tcpFrame = {0x1, 0x6, 0xDF, 0x62, 0x38};
     auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
-        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::TCP));
+        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::RTU));
     const auto answer = Process([](modbus_gateway::ModbusBufferPtr &buffer) {
       return buffer;
     },

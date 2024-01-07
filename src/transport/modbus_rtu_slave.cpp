@@ -3,8 +3,7 @@
 #include <common/logger.h>
 
 #include <modbus/modbus_buffer.h>
-#include <modbus/modbus_buffer_ascii_wrapper.h>
-#include <modbus/modbus_buffer_rtu_wrapper.h>
+#include <modbus/modbus_buffer_wrapper.h>
 
 namespace modbus_gateway {
 
@@ -21,12 +20,12 @@ ModbusRtuSlave::ModbusRtuSlave(const exchange::ExchangePtr &exchange,
       frameType_(frameType),
       idGenerator_(0),
       syncRequestInfo_(std::nullopt) {
+  serialPort_.open(device);
   serialPort_.set_option(options.baudRate);
   serialPort_.set_option(options.characterSize);
   serialPort_.set_option(options.parity);
   serialPort_.set_option(options.stopBits);
   serialPort_.set_option(options.flowControl);
-  serialPort_.open(device);
 
   assert(exchange);
   assert(router);
@@ -117,13 +116,13 @@ void ModbusRtuSlave::StartReadTask() {
                                 }
 
                                 const modbus::UnitId unitId = message->GetModbusBuffer()->GetUnitId();
-                                const exchange::ActorId slaveId = self->router_->Route(unitId);
-                                MG_TRACE("ModbusRtuSlave({})::read: unit id {} route to slave id {}",
-                                         self->id_, message->GetModbusMessageInfo().GetSourceId(), slaveId);
-                                const auto res = self->exchange_->Send(slaveId, message);
+                                const exchange::ActorId actorId = self->router_->Route(unitId);
+                                MG_TRACE("ModbusRtuSlave({})::read: unit id {} route to actor id {}",
+                                         self->id_, unitId, actorId);
+                                const auto res = self->exchange_->Send(actorId, message);
                                 if (!res) {
-                                  MG_ERROR("ModbusRtuSlave({})::read: route to slave id {} failed",
-                                           self->id_, slaveId);
+                                  MG_ERROR("ModbusRtuSlave({})::read: route to actor id {} failed",
+                                           self->id_, actorId);
                                 }
                                 MG_TRACE("ModbusRtuSlave({})::read: start receive task", self->id_);
                                 self->StartReadTask();
@@ -137,13 +136,8 @@ ModbusMessagePtr ModbusRtuSlave::MakeRequest(const ModbusBufferPtr &modbusBuffer
   }
   MG_TRACE("ModbusRtuSlave({})::MakeRequest: request: [{:X}]", id_, fmt::join(*modbusBuffer, " "))
 
-  auto wrapper = MakeWrapper(*modbusBuffer);
-  if (!wrapper) {
-    MG_ERROR("ModbusRtuSlave({})::MakeRequest: invalid target type", id_);
-    return nullptr;
-  }
-
-  modbus::CheckFrameResult checkFrameResult = wrapper->Check();
+  const auto wrapper = modbus::MakeModbusBufferWrapper(*modbusBuffer);
+  const auto checkFrameResult = wrapper->Check();
   if (checkFrameResult != modbus::CheckFrameResult::NoError) {
     MG_ERROR("ModbusRtuSlave({})::MakeRequest: invalid frame {}", id_, checkFrameResult);
     return nullptr;
@@ -238,11 +232,7 @@ ModbusBufferPtr ModbusRtuSlave::MakeResponse(const ModbusMessagePtr &modbusMessa
 
   modbusBuffer->ConvertTo(frameType_);
 
-  auto wrapper = MakeWrapper(*modbusBuffer);
-  if (!wrapper) {
-    MG_ERROR("ModbusRtuSlave({})::MakeResponse: invalid target type", id_);
-    return nullptr;
-  }
+  auto wrapper = modbus::MakeModbusBufferWrapper(*modbusBuffer);
   wrapper->Update();
 
   MG_DEBUG("ModbusRtuSlave({})::MakeResponse: response: transaction id {}, "
@@ -256,17 +246,6 @@ ModbusBufferPtr ModbusRtuSlave::MakeResponse(const ModbusMessagePtr &modbusMessa
   MG_TRACE("ModbusRtuSlave({})::MakeResponse: response: [{:X}]", id_, fmt::join(*modbusBuffer, " "));
 
   return modbusBuffer;
-}
-
-std::unique_ptr<modbus::IModbusBufferWrapper> ModbusRtuSlave::MakeWrapper(modbus::ModbusBuffer &modbusBuffer) {
-  switch (frameType_) {
-  case modbus::RTU:
-    return std::make_unique<modbus::ModbusBufferRtuWrapper>(modbusBuffer);
-  case modbus::ASCII:
-    return std::make_unique<modbus::ModbusBufferAsciiWrapper>(modbusBuffer);
-  default:
-    return nullptr;
-  }
 }
 
 }// namespace modbus_gateway

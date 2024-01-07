@@ -2,8 +2,7 @@
 
 #include <common/logger.h>
 
-#include <modbus/modbus_buffer_ascii_wrapper.h>
-#include <modbus/modbus_buffer_rtu_wrapper.h>
+#include <modbus/modbus_buffer_wrapper.h>
 
 namespace modbus_gateway {
 
@@ -22,12 +21,12 @@ ModbusRtuMaster::ModbusRtuMaster(const exchange::ExchangePtr &exchange,
       m_(), messageQueue_(),
       currentMessage_(std::nullopt),
       transactionIdGenerator_(0) {
+  serialPort_.open(device);
   serialPort_.set_option(options.baudRate);
   serialPort_.set_option(options.characterSize);
   serialPort_.set_option(options.parity);
   serialPort_.set_option(options.stopBits);
   serialPort_.set_option(options.flowControl);
-  serialPort_.open(device);
 
   assert(exchange);
   assert(frameType_ != modbus::TCP);
@@ -116,12 +115,7 @@ void ModbusRtuMaster::StartMessageTaskUnsafe() {
   ModbusBufferPtr modbusBuffer = currentMessage_->modbusMessage->GetModbusBuffer();
   modbusBuffer->ConvertTo(frameType_);
   {
-    auto wrapper = MakeWrapper(*modbusBuffer);
-    if (!wrapper) {
-      MG_ERROR("ModbusRtuSlave({})::MakeResponse: invalid target type", id_);
-      currentMessage_.reset();
-      return;
-    }
+    auto wrapper = modbus::MakeModbusBufferWrapper(*modbusBuffer);
     wrapper->Update();
 
     MG_DEBUG("ModbusRtuMaster({})::StartMessageTask: request: transaction id {}, "
@@ -157,17 +151,6 @@ void ModbusRtuMaster::StartMessageTaskUnsafe() {
                                  MG_TRACE("ModbusRtuMaster({})::write: start read task", self->id_);
                                  self->StartReadTask();
                                });
-}
-
-std::unique_ptr<modbus::IModbusBufferWrapper> ModbusRtuMaster::MakeWrapper(modbus::ModbusBuffer &modbusBuffer) {
-  switch (frameType_) {
-  case modbus::RTU:
-    return std::make_unique<modbus::ModbusBufferRtuWrapper>(modbusBuffer);
-  case modbus::ASCII:
-    return std::make_unique<modbus::ModbusBufferAsciiWrapper>(modbusBuffer);
-  default:
-    return nullptr;
-  }
 }
 
 void ModbusRtuMaster::StartWaitTask() {
@@ -255,17 +238,12 @@ ModbusMessagePtr ModbusRtuMaster::MakeResponse(const ModbusBufferPtr &modbusBuff
   MG_TRACE("ModbusRtuMaster({})::MakeResponse: response: [{:X}]", id_, fmt::join(*modbusBuffer, " "))
 
   const auto currentMessage = currentMessage_->modbusMessage;
-  const auto id = currentMessage_->id;
   currentMessage_.reset();
 
   const ModbusMessageInfo currentInfo = currentMessage->GetModbusMessageInfo();
 
   {
-    auto wrapper = MakeWrapper(*modbusBuffer);
-    if (!wrapper) {
-      MG_ERROR("ModbusRtuMaster({})::MakeResponse: invalid target type", id_);
-      return nullptr;
-    }
+    const auto wrapper = modbus::MakeModbusBufferWrapper(*modbusBuffer);
     const auto result = wrapper->Check();
     if (result != modbus::CheckFrameResult::NoError) {
       MG_ERROR("ModbusRtuMaster({})::MakeResponse: check message failed: {}", id_, result)

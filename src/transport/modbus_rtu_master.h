@@ -8,7 +8,6 @@
 #include <exchange/actor_helper.h>
 #include <exchange/iexchange.h>
 
-#include <modbus/modbus_buffer_wrapper.h>
 #include <modbus/modbus_buffer.h>
 
 namespace modbus_gateway {
@@ -42,8 +41,6 @@ private:
   void QueueProcessUnsafe();
 
   void StartMessageTaskUnsafe();
-
-  std::unique_ptr<modbus::IModbusBufferWrapper> MakeWrapper(modbus::ModbusBuffer &modbusBuffer);
 
   void StartWaitTask();
 
