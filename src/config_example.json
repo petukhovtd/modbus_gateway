@@ -1,0 +1,102 @@
+{
+  "service": {
+    "log_level": "trace",
+    "threads": 1
+  },
+  "slaves": [
+    {
+      "frame_type": "tcp",
+      "ip_address": "192.168.1.2",
+      "ip_port": 503
+    },
+    {
+      "frame_type": "tcp",
+      "ip_port": 502
+    },
+    {
+      "frame_type": "rtu",
+      "device": "/dev/ttyUSB0",
+      "baud_rate": 115200,
+      "character_size": 8,
+      "parity": "even",
+      "stop_bits": 1,
+      "flow_control": "none"
+    },
+    {
+      "frame_type": "ascii",
+      "device": "/dev/ttyUSB1",
+      "baud_rate": 9600,
+      "character_size": 8,
+      "parity": "none",
+      "stop_bits": 2,
+      "flow_control": "none"
+    }
+  ],
+  "masters": [
+    {
+      "frame_type": "tcp",
+      "timeout_ms": 1000,
+      "ip_address": "192.168.2.2",
+      "ip_port": 502
+    },
+    {
+      "frame_type": "rtu",
+      "timeout_ms": 1000,
+      "device": "/dev/ttyUSB2",
+      "baud_rate": 115200,
+      "character_size": 8,
+      "parity": "even",
+      "stop_bits": 1,
+      "flow_control": "none",
+      "unit_id": [
+        {
+          "type": "range",
+          "begin": 10,
+          "end": 20
+        },
+        {
+          "type": "value",
+          "value": 25
+        }
+      ]
+    },
+    {
+      "frame_type": "ascii",
+      "timeout_ms": 1000,
+      "device": "/dev/ttyUSB3",
+      "baud_rate": 9600,
+      "character_size": 8,
+      "parity": "none",
+      "stop_bits": 2,
+      "flow_control": "none",
+      "unit_id": [
+        {
+          "type": "value",
+          "value": 30
+        },
+        {
+          "type": "range",
+          "begin": 40,
+          "end": 50
+        },
+        {
+          "type": "value",
+          "value": 55
+        }
+      ]
+    },
+    {
+      "frame_type": "tcp",
+      "timeout_ms": 1000,
+      "ip_address": "192.168.3.2",
+      "ip_port": 503,
+      "unit_id": [
+        {
+          "type": "range",
+          "begin": 100,
+          "end": 110
+        }
+      ]
+    }
+  ]
+}

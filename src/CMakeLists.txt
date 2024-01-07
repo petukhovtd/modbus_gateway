@@ -11,6 +11,22 @@ set(SOURCE
         transport/modbus_tcp_client.cpp
         transport/modbus_rtu_slave.cpp
         transport/modbus_rtu_master.cpp
+
+        config/trace_path.cpp
+        config/trace_deep.cpp
+        config/value_type.cpp
+        config/parser_exception.cpp
+        config/key_not_found_exception.cpp
+        config/invalid_type_exception.cpp
+        config/invalid_value_exception.cpp
+        config/convertors.cpp
+        config/extractor.cpp
+        config/config_service.cpp
+        config/i_transport_config.cpp
+        config/tcp_server_config.cpp
+        config/rtu_slave_config.cpp
+        #        config/tcp_client_config.cpp
+        config/config.cpp
 )
 
 add_library(mbgw STATIC ${SOURCE})
@@ -20,6 +36,7 @@ target_link_libraries(mbgw PUBLIC
         modbus
         exchange
         asio
+        nlohmann_json
 )
 
 add_executable(${PROJECT_NAME} main.cpp)
