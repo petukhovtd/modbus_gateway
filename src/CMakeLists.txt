@@ -11,6 +11,7 @@ set(SOURCE
         transport/modbus_tcp_client.cpp
         transport/modbus_rtu_slave.cpp
         transport/modbus_rtu_master.cpp
+        transport/i_modbus_slave.cpp
 
         config/trace_path.cpp
         config/trace_deep.cpp

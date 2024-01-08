@@ -10,7 +10,11 @@ namespace modbus_gateway {
 ModbusTcpServer::ModbusTcpServer(const exchange::ExchangePtr &exchange, const ContextPtr &context,
                                  const asio::ip::address &addr, ip::port_type port,
                                  const RouterPtr &router)
-    : id_(exchange::defaultId), exchange_(exchange), acceptor_(*context, TcpEndpoint(addr, port), true), router_(router) {
+    : IModbusSlave(TransportType::TcpServer),
+      id_(exchange::defaultId),
+      exchange_(exchange),
+      acceptor_(*context, TcpEndpoint(addr, port), true),
+      router_(router) {
   assert(exchange_);
   assert(router_);
   MG_TRACE("ModbusTcpServer({})::Ctor: {}:{}", id_, addr.to_string(), port);

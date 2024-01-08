@@ -7,6 +7,7 @@
 #include <message/modbus_message_info.h>
 #include <transport/irouter.h>
 #include <transport/rtu_options.h>
+#include <transport/i_modbus_slave.h>
 
 #include <exchange/actor_helper.h>
 #include <exchange/iexchange.h>
@@ -16,7 +17,7 @@
 
 namespace modbus_gateway {
 
-class ModbusRtuSlave : public exchange::ActorHelper<ModbusRtuSlave> {
+class ModbusRtuSlave : public exchange::ActorHelper<ModbusRtuSlave>, IModbusSlave {
   using ModbusMessageInfoOpt = std::optional<ModbusMessageInfo>;
 
 public:
@@ -35,9 +36,9 @@ public:
 
   void ResetId() override;
 
-  void Start();
+  void Start() override;
 
-  void Stop();
+  void Stop() override;
 
 private:
   void StartReadTask();

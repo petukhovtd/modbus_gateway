@@ -1,6 +1,7 @@
 #pragma once
 
 #include <transport/modbus_tcp_connection.h>
+#include <transport/i_modbus_slave.h>
 
 #include <common/types_asio.h>
 
@@ -13,7 +14,7 @@
 
 namespace modbus_gateway {
 
-class ModbusTcpServer final : public exchange::ActorHelper<ModbusTcpServer> {
+class ModbusTcpServer final : public exchange::ActorHelper<ModbusTcpServer>, IModbusSlave {
   using TcpClientPtr = std::shared_ptr<ModbusTcpConnection>;
   using ClientDb = std::unordered_map<exchange::ActorId, TcpClientPtr>;
 
@@ -27,9 +28,9 @@ public:
 
   void ResetId() override;
 
-  void Start();
+  void Start() override;
 
-  void Stop();
+  void Stop() override;
 
   ~ModbusTcpServer() override;
 
