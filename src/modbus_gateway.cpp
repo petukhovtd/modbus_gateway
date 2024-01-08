@@ -19,8 +19,6 @@
 #include <exchange/exchange.h>
 #include <exchange/iactor.h>
 
-//#include <iostream>
-
 namespace modbus_gateway {
 
 struct Master {

@@ -25,9 +25,9 @@ add_executable(${PROJECT_NAME} ${SOURCE})
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 target_link_libraries(${PROJECT_NAME} PRIVATE
         gtest
-        modbus
-        exchange
-        spdlog
-        mbgw
+        mg
+#        modbus
+#        exchange
+#        spdlog
 )
 
