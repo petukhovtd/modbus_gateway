@@ -14,7 +14,7 @@
 
 namespace modbus_gateway {
 
-class ModbusTcpServer final : public exchange::ActorHelper<ModbusTcpServer>, IModbusSlave {
+class ModbusTcpServer final : public exchange::ActorHelper<ModbusTcpServer>, public IModbusSlave {
   using TcpClientPtr = std::shared_ptr<ModbusTcpConnection>;
   using ClientDb = std::unordered_map<exchange::ActorId, TcpClientPtr>;
 
@@ -27,6 +27,8 @@ public:
   void SetId(exchange::ActorId id) override;
 
   void ResetId() override;
+
+  exchange::ActorId GetId() override;
 
   void Start() override;
 

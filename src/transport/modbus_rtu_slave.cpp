@@ -63,6 +63,10 @@ void ModbusRtuSlave::ResetId() {
   id_ = exchange::defaultId;
 }
 
+exchange::ActorId ModbusRtuSlave::GetId() {
+  return 0;
+}
+
 void ModbusRtuSlave::Start() {
   StartReadTask();
 }

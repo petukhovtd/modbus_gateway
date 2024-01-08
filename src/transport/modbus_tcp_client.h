@@ -38,6 +38,8 @@ public:
 
   void ResetId() override;
 
+  exchange::ActorId GetId() override;
+
 private:
   void MessageProcess(const ModbusMessagePtr &message);
 

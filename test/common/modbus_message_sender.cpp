@@ -31,6 +31,10 @@ void ModbusMessageSender::ResetId() {
   id_ = exchange::defaultId;
 }
 
+exchange::ActorId ModbusMessageSender::GetId() {
+  return id_;
+}
+
 void ModbusMessageSender::SendTo(const modbus_gateway::ModbusBufferPtr &modbusBuffer, exchange::ActorId target) {
   const auto transactionId = ++transactionIdGenerator_;
   const auto modbusMessageInfo = modbus_gateway::ModbusMessageInfo{id_, transactionId};

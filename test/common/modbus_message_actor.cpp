@@ -31,6 +31,10 @@ void ModbusMessageActor::ResetId() {
   id_ = exchange::defaultId;
 }
 
+exchange::ActorId ModbusMessageActor::GetId() {
+  return id_;
+}
+
 void ModbusMessageActor::SetHandler(const ModbusMessageActor::Handler &handler) {
   handler_ = handler;
 }

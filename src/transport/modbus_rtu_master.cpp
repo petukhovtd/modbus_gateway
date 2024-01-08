@@ -65,6 +65,10 @@ void ModbusRtuMaster::ResetId() {
   id_ = exchange::defaultId;
 }
 
+exchange::ActorId ModbusRtuMaster::GetId() {
+  return 0;
+}
+
 void ModbusRtuMaster::MessageProcess(const ModbusMessagePtr &message) {
   std::lock_guard<std::mutex> lock(m_);
   messageQueue_.Push(message);

@@ -28,6 +28,8 @@ public:
 
   void ResetId() override;
 
+  exchange::ActorId GetId() override;
+
   void Start();
 
   void Stop();

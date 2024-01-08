@@ -54,6 +54,10 @@ void ModbusTcpConnection::ResetId() {
   id_ = exchange::defaultId;
 }
 
+exchange::ActorId ModbusTcpConnection::GetId() {
+  return id_;
+}
+
 void ModbusTcpConnection::Start() {
   assert(id_ != exchange::defaultId);
   MG_INFO("ModbusTcpConnection({})::Start: serverId {}, client {}:{}",

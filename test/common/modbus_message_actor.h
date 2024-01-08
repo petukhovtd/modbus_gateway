@@ -21,6 +21,7 @@ public:
 
   void SetId(exchange::ActorId id) override;
   void ResetId() override;
+  exchange::ActorId GetId() override;
 
   void SetHandler(const Handler &handler);
 

@@ -51,6 +51,10 @@ void ModbusTcpClient::ResetId() {
   id_ = exchange::defaultId;
 }
 
+exchange::ActorId ModbusTcpClient::GetId() {
+  return id_;
+}
+
 void ModbusTcpClient::MessageProcess(const ModbusMessagePtr &message) {
   std::lock_guard<std::mutex> lock(m_);
   messageQueue_.Push(message);

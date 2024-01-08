@@ -2,6 +2,7 @@
 
 #include <transport/irouter.h>
 
+#include <array>
 #include <limits>
 
 namespace modbus_gateway {

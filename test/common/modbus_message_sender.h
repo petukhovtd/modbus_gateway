@@ -19,6 +19,8 @@ public:
 
   void ResetId() override;
 
+  exchange::ActorId GetId() override;
+
   void SendTo(const modbus_gateway::ModbusBufferPtr &modbusBuffer, exchange::ActorId target);
 
   modbus_gateway::ModbusMessagePtr receiveMessage = nullptr;

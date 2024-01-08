@@ -8,7 +8,7 @@ Router::Router(exchange::ActorId defaultId)
 }
 
 Router::Router()
-    : routeMap_() {}
+    : Router(exchange::defaultId) {}
 
 exchange::ActorId Router::Route(modbus::UnitId unitId) const {
   return routeMap_[unitId];

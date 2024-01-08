@@ -1,6 +1,7 @@
 #pragma once
 
 #include <config/i_transport_config.h>
+#include <config/master_config.h>
 #include <config/trace_path.h>
 #include <config/unit_id_range.h>
 
@@ -12,7 +13,7 @@
 
 namespace modbus_gateway {
 
-struct RtuMasterConfig : public ITransportConfig {
+struct RtuMasterConfig : public ITransportConfig, MasterConfig {
 
   RtuMasterConfig(TracePath &tracePath, const nlohmann::json::value_type &obj, modbus::FrameType frameType);
 
@@ -22,8 +23,6 @@ struct RtuMasterConfig : public ITransportConfig {
 
   std::string device{};
   RtuOptions rtuOptions{};
-  std::chrono::milliseconds timeout = std::chrono::milliseconds(1000);
-  std::vector<UnitIdRange> unitIdSet{};
 
 private:
   modbus::FrameType frameType_;

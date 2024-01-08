@@ -1,6 +1,7 @@
 #pragma once
 
 #include <config/i_transport_config.h>
+#include <config/master_config.h>
 #include <config/trace_path.h>
 #include <config/unit_id_range.h>
 
@@ -10,7 +11,7 @@
 
 namespace modbus_gateway {
 
-struct TcpClientConfig : public ITransportConfig {
+struct TcpClientConfig : public ITransportConfig, MasterConfig {
 public:
   TcpClientConfig(TracePath &tracePath, const nlohmann::json::value_type &obj);
 
@@ -18,8 +19,6 @@ public:
 
   asio::ip::address address = asio::ip::address_v4::any();
   asio::ip::port_type port = 502;
-  std::chrono::milliseconds timeout = std::chrono::milliseconds(1000);
-  std::vector<UnitIdRange> unitIdSet{};
 };
 
 }// namespace modbus_gateway

@@ -5,7 +5,9 @@ namespace modbus_gateway {
 
 CommandLine::CommandLine(int argc, char **argv)
     : options_("modbus_gateway", "Modbus gateway") {
-  options_.add_options()("h,help", "Print usage")("c,config", "Config file", cxxopts::value<std::string>());
+  options_.add_options()
+      ("h,help", "Print usage")
+      ("c,config", "Config file", cxxopts::value<std::string>());
 
   parseResult_ = options_.parse(argc, argv);
 }

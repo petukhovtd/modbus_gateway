@@ -17,7 +17,7 @@
 
 namespace modbus_gateway {
 
-class ModbusRtuSlave : public exchange::ActorHelper<ModbusRtuSlave>, IModbusSlave {
+class ModbusRtuSlave : public exchange::ActorHelper<ModbusRtuSlave>, public IModbusSlave {
   using ModbusMessageInfoOpt = std::optional<ModbusMessageInfo>;
 
 public:
@@ -35,6 +35,8 @@ public:
   void SetId(exchange::ActorId id) override;
 
   void ResetId() override;
+
+  exchange::ActorId GetId() override;
 
   void Start() override;
 

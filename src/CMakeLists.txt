@@ -12,6 +12,7 @@ set(SOURCE
         transport/modbus_rtu_slave.cpp
         transport/modbus_rtu_master.cpp
         transport/i_modbus_slave.cpp
+        transport/router.cpp
 
         config/trace_path.cpp
         config/trace_deep.cpp
@@ -25,6 +26,7 @@ set(SOURCE
         config/extractor.cpp
         config/config_service.cpp
         config/i_transport_config.cpp
+        config/master_config.cpp
         config/tcp_server_config.cpp
         config/rtu_slave_config.cpp
         config/tcp_client_config.cpp
@@ -33,6 +35,8 @@ set(SOURCE
 
         command_line/command_line.cpp
         command_line/command_line_exception.cpp
+
+        modbus_gateway.cpp
 )
 
 add_library(mbgw STATIC ${SOURCE})
