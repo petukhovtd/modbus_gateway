@@ -23,3 +23,6 @@ add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE
         mg
 )
+if(MG_BUILD_STATIC)
+    target_link_libraries(${PROJECT_NAME} PRIVATE -static)
+endif ()
