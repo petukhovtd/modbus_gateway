@@ -33,20 +33,20 @@ void Config::Validate() const {
       const auto &master = masters[masterIndex];
       switch (master->GetType()) {
 
-      case ITransportConfig::Type::TcpClient: {
+      case TransportType::TcpClient: {
         auto ptr = std::dynamic_pointer_cast<modbus_gateway::TcpClientConfig>(master);
         if (ptr && ptr->unitIdSet.empty()) {
           defaultIdIndexes.push_back(masterIndex);
         }
       } break;
-      case ITransportConfig::Type::RtuMaster: {
+      case TransportType::RtuMaster: {
         auto ptr = std::dynamic_pointer_cast<modbus_gateway::RtuMasterConfig>(master);
         if (ptr && ptr->unitIdSet.empty()) {
           defaultIdIndexes.push_back(masterIndex);
         }
       } break;
-      case ITransportConfig::Type::TcpServer: break;
-      case ITransportConfig::Type::RtuSlave: break;
+      case TransportType::TcpServer: break;
+      case TransportType::RtuSlave: break;
       default:
         break;
       }

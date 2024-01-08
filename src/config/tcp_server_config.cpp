@@ -5,7 +5,7 @@
 namespace modbus_gateway {
 
 TcpServerConfig::TcpServerConfig(TracePath &tracePath, const nlohmann::json::value_type::value_type &obj)
-    : ITransportConfig(ITransportConfig::Type::TcpServer) {
+    : ITransportConfig(TransportType::TcpServer) {
 
   const auto addrOpt = ExtractIpAddressOptional(tracePath, obj);
   if (addrOpt.has_value()) {

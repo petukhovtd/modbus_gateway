@@ -5,7 +5,7 @@
 namespace modbus_gateway {
 
 RtuMasterConfig::RtuMasterConfig(TracePath &tracePath, const nlohmann::json::value_type &obj, modbus::FrameType frameType)
-    : ITransportConfig(ITransportConfig::Type::RtuMaster),
+    : ITransportConfig(TransportType::RtuMaster),
       frameType_(frameType) {
 
   device = ExtractString(tracePath, obj, keys::device);

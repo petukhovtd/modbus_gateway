@@ -4,7 +4,7 @@
 
 namespace modbus_gateway {
 TcpClientConfig::TcpClientConfig(TracePath &tracePath, const nlohmann::json::value_type &obj)
-    : ITransportConfig(ITransportConfig::Type::TcpClient) {
+    : ITransportConfig(TransportType::TcpClient) {
   address = ExtractIpAddress(tracePath, obj);
   port = ExtractIpPort(tracePath, obj);
   timeout = std::chrono::milliseconds(ExtractUnsignedNumber<size_t>(tracePath, obj, keys::timeout));

@@ -222,7 +222,7 @@ TEST(ConfigTest, SlaveTcpTest) {
   auto slavePtr = modbus_gateway::ExtractSlave(td.GetTracePath(), slave);
 
   ASSERT_TRUE(slavePtr);
-  ASSERT_EQ(slavePtr->GetType(), modbus_gateway::ITransportConfig::Type::TcpServer);
+  ASSERT_EQ(slavePtr->GetType(), modbus_gateway::TransportType::TcpServer);
 
   auto tcpServerConfig = std::dynamic_pointer_cast<modbus_gateway::TcpServerConfig>(slavePtr);
   ASSERT_TRUE(tcpServerConfig);
@@ -250,7 +250,7 @@ TEST(ConfigTest, SlaveTcpOptionalTest) {
   auto slavePtr = modbus_gateway::ExtractSlave(td.GetTracePath(), slave);
 
   ASSERT_TRUE(slavePtr);
-  ASSERT_EQ(slavePtr->GetType(), modbus_gateway::ITransportConfig::Type::TcpServer);
+  ASSERT_EQ(slavePtr->GetType(), modbus_gateway::TransportType::TcpServer);
 
   auto tcpServerConfig = std::dynamic_pointer_cast<modbus_gateway::TcpServerConfig>(slavePtr);
   ASSERT_TRUE(tcpServerConfig);
@@ -293,7 +293,7 @@ TEST(ConfigTest, SlaveRtuTest) {
     auto slavePtr = modbus_gateway::ExtractSlave(td.GetTracePath(), slave);
 
     ASSERT_TRUE(slavePtr);
-    ASSERT_EQ(slavePtr->GetType(), modbus_gateway::ITransportConfig::Type::RtuSlave);
+    ASSERT_EQ(slavePtr->GetType(), modbus_gateway::TransportType::RtuSlave);
 
     auto rtuSlaveConfig = std::dynamic_pointer_cast<modbus_gateway::RtuSlaveConfig>(slavePtr);
     ASSERT_TRUE(rtuSlaveConfig);
@@ -314,7 +314,7 @@ TEST(ConfigTest, SlaveRtuTest) {
     auto slavePtr = modbus_gateway::ExtractSlave(td.GetTracePath(), slave);
 
     ASSERT_TRUE(slavePtr);
-    ASSERT_EQ(slavePtr->GetType(), modbus_gateway::ITransportConfig::Type::RtuSlave);
+    ASSERT_EQ(slavePtr->GetType(), modbus_gateway::TransportType::RtuSlave);
 
     auto rtuSlaveConfig = std::dynamic_pointer_cast<modbus_gateway::RtuSlaveConfig>(slavePtr);
     ASSERT_TRUE(rtuSlaveConfig);
@@ -343,7 +343,7 @@ TEST(ConfigTest, SlaveRtuOptionalTest) {
     auto slavePtr = modbus_gateway::ExtractSlave(td.GetTracePath(), slave);
 
     ASSERT_TRUE(slavePtr);
-    ASSERT_EQ(slavePtr->GetType(), modbus_gateway::ITransportConfig::Type::RtuSlave);
+    ASSERT_EQ(slavePtr->GetType(), modbus_gateway::TransportType::RtuSlave);
 
     auto rtuSlaveConfig = std::dynamic_pointer_cast<modbus_gateway::RtuSlaveConfig>(slavePtr);
     ASSERT_TRUE(rtuSlaveConfig);
@@ -386,7 +386,7 @@ TEST(ConfigTest, MasterTcpTest) {
   auto masterPtr = modbus_gateway::ExtractMaster(td.GetTracePath(), master);
 
   ASSERT_TRUE(masterPtr);
-  ASSERT_EQ(masterPtr->GetType(), modbus_gateway::ITransportConfig::Type::TcpClient);
+  ASSERT_EQ(masterPtr->GetType(), modbus_gateway::TransportType::TcpClient);
 
   auto tcpMasterConfig = std::dynamic_pointer_cast<modbus_gateway::TcpClientConfig>(masterPtr);
   ASSERT_TRUE(tcpMasterConfig);
@@ -418,7 +418,7 @@ TEST(ConfigTest, MasterTcpOptionalTest) {
   auto masterPtr = modbus_gateway::ExtractMaster(td.GetTracePath(), master);
 
   ASSERT_TRUE(masterPtr);
-  ASSERT_EQ(masterPtr->GetType(), modbus_gateway::ITransportConfig::Type::TcpClient);
+  ASSERT_EQ(masterPtr->GetType(), modbus_gateway::TransportType::TcpClient);
 
   auto tcpMasterConfig = std::dynamic_pointer_cast<modbus_gateway::TcpClientConfig>(masterPtr);
   ASSERT_TRUE(tcpMasterConfig);
@@ -491,7 +491,7 @@ TEST(ConfigTest, MasterRtuTest) {
     auto masterPtr = modbus_gateway::ExtractMaster(td.GetTracePath(), master);
 
     ASSERT_TRUE(masterPtr);
-    ASSERT_EQ(masterPtr->GetType(), modbus_gateway::ITransportConfig::Type::RtuMaster);
+    ASSERT_EQ(masterPtr->GetType(), modbus_gateway::TransportType::RtuMaster);
 
     auto rtuMasterConfig = std::dynamic_pointer_cast<modbus_gateway::RtuMasterConfig>(masterPtr);
     ASSERT_TRUE(rtuMasterConfig);
@@ -514,7 +514,7 @@ TEST(ConfigTest, MasterRtuTest) {
     auto masterPtr = modbus_gateway::ExtractMaster(td.GetTracePath(), master);
 
     ASSERT_TRUE(masterPtr);
-    ASSERT_EQ(masterPtr->GetType(), modbus_gateway::ITransportConfig::Type::RtuMaster);
+    ASSERT_EQ(masterPtr->GetType(), modbus_gateway::TransportType::RtuMaster);
 
     auto rtuMasterConfig = std::dynamic_pointer_cast<modbus_gateway::RtuMasterConfig>(masterPtr);
     ASSERT_TRUE(rtuMasterConfig);
@@ -544,7 +544,7 @@ TEST(ConfigTest, MasterRtuOptinalTest) {
     auto masterPtr = modbus_gateway::ExtractMaster(td.GetTracePath(), master);
 
     ASSERT_TRUE(masterPtr);
-    ASSERT_EQ(masterPtr->GetType(), modbus_gateway::ITransportConfig::Type::RtuMaster);
+    ASSERT_EQ(masterPtr->GetType(), modbus_gateway::TransportType::RtuMaster);
 
     auto rtuMasterConfig = std::dynamic_pointer_cast<modbus_gateway::RtuMasterConfig>(masterPtr);
     ASSERT_TRUE(rtuMasterConfig);

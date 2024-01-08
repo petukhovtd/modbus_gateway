@@ -2,10 +2,10 @@
 
 namespace modbus_gateway {
 
-ITransportConfig::ITransportConfig(Type type)
+ITransportConfig::ITransportConfig(TransportType type)
     : type_(type) {}
 
-ITransportConfig::Type ITransportConfig::GetType() const {
+TransportType ITransportConfig::GetType() const {
   return type_;
 }
 
