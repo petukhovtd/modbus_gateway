@@ -13,7 +13,7 @@ namespace modbus_gateway {
 
 ModbusTcpConnection::ModbusTcpConnection(const exchange::ExchangePtr &exchange, exchange::ActorId serverId,
                                          TcpSocketPtr socket, const RouterPtr &router)
-    : id_(exchange::startId), exchange_(exchange), serverId_(serverId), socket_(std::move(socket)), router_(router),
+    : id_(exchange::defaultId), exchange_(exchange), serverId_(serverId), socket_(std::move(socket)), router_(router),
       syncRequestInfo_(std::nullopt) {
   assert(exchange_);
   assert(socket_);
@@ -51,11 +51,11 @@ void ModbusTcpConnection::SetId(exchange::ActorId id) {
 }
 
 void ModbusTcpConnection::ResetId() {
-  id_ = exchange::startId;
+  id_ = exchange::defaultId;
 }
 
 void ModbusTcpConnection::Start() {
-  assert(id_ != exchange::startId);
+  assert(id_ != exchange::defaultId);
   MG_INFO("ModbusTcpConnection({})::Start: serverId {}, client {}:{}",
           id_, serverId_,
           socket_->remote_endpoint().address().to_string(),

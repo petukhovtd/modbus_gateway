@@ -6,7 +6,7 @@
 namespace test {
 
 ModbusMessageActor::ModbusMessageActor(const exchange::ExchangePtr &exchange)
-    : id_(exchange::startId), exchange_(exchange), handler_([](const auto &ptr) { return ptr; }) {}
+    : id_(exchange::defaultId), exchange_(exchange), handler_([](const auto &ptr) { return ptr; }) {}
 
 void ModbusMessageActor::Receive(const exchange::MessagePtr &message) {
   MG_TRACE("ModbusMessageActor({})::Receive message", id_);
@@ -28,7 +28,7 @@ void ModbusMessageActor::SetId(exchange::ActorId id) {
 }
 
 void ModbusMessageActor::ResetId() {
-  id_ = exchange::startId;
+  id_ = exchange::defaultId;
 }
 
 void ModbusMessageActor::SetHandler(const ModbusMessageActor::Handler &handler) {

@@ -10,7 +10,7 @@ namespace modbus_gateway {
 ModbusTcpServer::ModbusTcpServer(const exchange::ExchangePtr &exchange, const ContextPtr &context,
                                  const asio::ip::address &addr, ip::port_type port,
                                  const RouterPtr &router)
-    : id_(exchange::startId), exchange_(exchange), acceptor_(*context, TcpEndpoint(addr, port), true), router_(router) {
+    : id_(exchange::defaultId), exchange_(exchange), acceptor_(*context, TcpEndpoint(addr, port), true), router_(router) {
   assert(exchange_);
   assert(router_);
   MG_TRACE("ModbusTcpServer({})::Ctor: {}:{}", id_, addr.to_string(), port);
@@ -32,11 +32,11 @@ void ModbusTcpServer::SetId(exchange::ActorId id) {
 }
 
 void ModbusTcpServer::ResetId() {
-  id_ = exchange::startId;
+  id_ = exchange::defaultId;
 }
 
 void ModbusTcpServer::Start() {
-  assert(id_ != exchange::startId);
+  assert(id_ != exchange::defaultId);
   MG_INFO("ModbusTcpServer({})::Start", id_);
   AcceptTask();
 }

@@ -4,7 +4,7 @@
 
 namespace test {
 ModbusMessageSender::ModbusMessageSender(const exchange::ExchangePtr &exchange)
-    : id_(exchange::startId),
+    : id_(exchange::defaultId),
       exchange_(exchange),
       transactionIdGenerator_(0) {
 }
@@ -28,7 +28,7 @@ void ModbusMessageSender::SetId(exchange::ActorId id) {
 }
 
 void ModbusMessageSender::ResetId() {
-  id_ = exchange::startId;
+  id_ = exchange::defaultId;
 }
 
 void ModbusMessageSender::SendTo(const modbus_gateway::ModbusBufferPtr &modbusBuffer, exchange::ActorId target) {

@@ -13,7 +13,7 @@ ModbusRtuSlave::ModbusRtuSlave(const exchange::ExchangePtr &exchange,
                                const RtuOptions &options,
                                const RouterPtr &router,
                                modbus::FrameType frameType)
-    : id_(exchange::startId),
+    : id_(exchange::defaultId),
       exchange_(exchange),
       serialPort_(*context),
       router_(router),
@@ -59,7 +59,7 @@ void ModbusRtuSlave::SetId(exchange::ActorId id) {
 }
 
 void ModbusRtuSlave::ResetId() {
-  id_ = exchange::startId;
+  id_ = exchange::defaultId;
 }
 
 void ModbusRtuSlave::Start() {

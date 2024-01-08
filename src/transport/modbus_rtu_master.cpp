@@ -12,7 +12,7 @@ ModbusRtuMaster::ModbusRtuMaster(const exchange::ExchangePtr &exchange,
                                  const RtuOptions &options,
                                  std::chrono::milliseconds timeout,
                                  modbus::FrameType frameType)
-    : id_(exchange::startId),
+    : id_(exchange::defaultId),
       exchange_(exchange),
       serialPort_(*context),
       timeout_(timeout),
@@ -62,7 +62,7 @@ void ModbusRtuMaster::SetId(exchange::ActorId id) {
 }
 
 void ModbusRtuMaster::ResetId() {
-  id_ = exchange::startId;
+  id_ = exchange::defaultId;
 }
 
 void ModbusRtuMaster::MessageProcess(const ModbusMessagePtr &message) {

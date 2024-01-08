@@ -12,7 +12,7 @@ ModbusTcpClient::ModbusTcpClient(const exchange::ExchangePtr &exchange,
                                  const asio::ip::address &addr,
                                  asio::ip::port_type port,
                                  std::chrono::milliseconds timeout)
-    : id_(exchange::startId),
+    : id_(exchange::defaultId),
       exchange_(exchange),
       socket_(std::make_unique<TcpSocketPtr::element_type>(*context)),
       ep_(addr, port),
@@ -48,7 +48,7 @@ void ModbusTcpClient::SetId(exchange::ActorId id) {
 }
 
 void ModbusTcpClient::ResetId() {
-  id_ = exchange::startId;
+  id_ = exchange::defaultId;
 }
 
 void ModbusTcpClient::MessageProcess(const ModbusMessagePtr &message) {
