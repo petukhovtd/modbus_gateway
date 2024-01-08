@@ -29,6 +29,9 @@ set(SOURCE
         config/tcp_client_config.cpp
         config/rtu_maser_config.cpp
         config/config.cpp
+
+        command_line/command_line.cpp
+        command_line/command_line_exception.cpp
 )
 
 add_library(mbgw STATIC ${SOURCE})
@@ -39,6 +42,7 @@ target_link_libraries(mbgw PUBLIC
         exchange
         asio
         nlohmann_json
+        cxxopts
 )
 
 add_executable(${PROJECT_NAME} main.cpp)
