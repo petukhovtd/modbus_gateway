@@ -43,7 +43,7 @@ private:
 
 private:
   std::atomic<exchange::ActorId> id_;
-  exchange::ExchangePtr exchange_;
+  exchange::ExchangeWeak exchange_;
   TcpAcceptor acceptor_;
   RouterPtr router_;
   std::mutex mutex_;

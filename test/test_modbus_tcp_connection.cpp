@@ -79,50 +79,50 @@ TEST_F(ModbusTcpConnectionTest, EchoTest) {
   EXPECT_TRUE(test::Compare(*sendBuffer, *receiveBuffer));
 }
 
-//TEST_F(ModbusTcpConnectionTest, SaveTransactionId) {
-//  static const modbus::AduBuffer tcpFrame = {0x0, 0x1, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4};
-//  auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
-//      test::MakeModbusBuffer(tcpFrame, modbus::FrameType::TCP));
-//  auto receiveBuffer = std::make_shared<modbus::ModbusBuffer>(modbus::FrameType::TCP);
-//
-//  Process([](const modbus_gateway::ModbusMessagePtr &in) -> modbus_gateway::ModbusMessagePtr {
-//    modbus_gateway::ModbusMessageInfo modbusMessageInfo = in->GetModbusMessageInfo();
-//    modbus_gateway::ModbusBufferPtr modbusBuffer = in->GetModbusBuffer();
-//    modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper(*modbusBuffer);
-//    auto id = modbusBufferTcpWrapper.GetTransactionId() + 1;
-//    modbusBufferTcpWrapper.SetTransactionId(id);
-//    return modbus_gateway::ModbusMessage::Create(modbusMessageInfo, modbusBuffer);
-//  },
-//          sendBuffer, receiveBuffer);
-//
-//  EXPECT_TRUE(test::Compare(*sendBuffer, *receiveBuffer));
-//}
+TEST_F(ModbusTcpConnectionTest, SaveTransactionId) {
+  static const modbus::AduBuffer tcpFrame = {0x0, 0x1, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4};
+  auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
+      test::MakeModbusBuffer(tcpFrame, modbus::FrameType::TCP));
+  auto receiveBuffer = std::make_shared<modbus::ModbusBuffer>(modbus::FrameType::TCP);
 
-//TEST_F(ModbusTcpConnectionTest, CheckRequest) {
-//  auto receiveBuffer = std::make_shared<modbus::ModbusBuffer>(modbus::FrameType::TCP);
-//  size_t messageCount = 0;
-//
-//  auto handler = [&messageCount](const modbus_gateway::ModbusMessagePtr &in) -> modbus_gateway::ModbusMessagePtr {
-//    ++messageCount;
-//    return in;
-//  };
-//
-//  {// invalid size for tcp
-//    static const modbus::AduBuffer tcpFrame = {0x3, 0x1, 0x3, 0x4};
-//    auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
-//        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::RTU));
-//    Process(handler, sendBuffer, receiveBuffer);
-//    EXPECT_EQ(messageCount, 0);
-//  }
-//
-//  {// invalid type for tcp
-//    static const modbus::AduBuffer tcpFrame = {0x10, 0x0, 0x0, 0x0, 0x1, 0x2, 0x0, 0x0};
-//    auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
-//        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::RTU));
-//    Process(handler, sendBuffer, receiveBuffer);
-//    EXPECT_EQ(messageCount, 0);
-//  }
-//}
+  Process([](const modbus_gateway::ModbusMessagePtr &in) -> modbus_gateway::ModbusMessagePtr {
+    modbus_gateway::ModbusMessageInfo modbusMessageInfo = in->GetModbusMessageInfo();
+    modbus_gateway::ModbusBufferPtr modbusBuffer = in->GetModbusBuffer();
+    modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper(*modbusBuffer);
+    auto id = modbusBufferTcpWrapper.GetTransactionId() + 1;
+    modbusBufferTcpWrapper.SetTransactionId(id);
+    return modbus_gateway::ModbusMessage::Create(modbusMessageInfo, modbusBuffer);
+  },
+          sendBuffer, receiveBuffer);
+
+  EXPECT_TRUE(test::Compare(*sendBuffer, *receiveBuffer));
+}
+
+TEST_F(ModbusTcpConnectionTest, CheckRequest) {
+  auto receiveBuffer = std::make_shared<modbus::ModbusBuffer>(modbus::FrameType::TCP);
+  size_t messageCount = 0;
+
+  auto handler = [&messageCount](const modbus_gateway::ModbusMessagePtr &in) -> modbus_gateway::ModbusMessagePtr {
+    ++messageCount;
+    return in;
+  };
+
+  {// invalid size for tcp
+    static const modbus::AduBuffer tcpFrame = {0x3, 0x1, 0x3, 0x4};
+    auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
+        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::RTU));
+    Process(handler, sendBuffer, receiveBuffer);
+    EXPECT_EQ(messageCount, 0);
+  }
+
+  {// invalid type for tcp
+    static const modbus::AduBuffer tcpFrame = {0x10, 0x0, 0x0, 0x0, 0x1, 0x2, 0x0, 0x0};
+    auto sendBuffer = std::make_shared<modbus::ModbusBuffer>(
+        test::MakeModbusBuffer(tcpFrame, modbus::FrameType::RTU));
+    Process(handler, sendBuffer, receiveBuffer);
+    EXPECT_EQ(messageCount, 0);
+  }
+}
 
 TEST_F(ModbusTcpConnectionTest, CheckResponse) {
   static const modbus::AduBuffer tcpFrame = {0x0, 0x1, 0x0, 0x0, 0x0, 0x3, 0x1, 0x3, 0x4};

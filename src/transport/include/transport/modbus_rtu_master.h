@@ -10,6 +10,8 @@
 
 #include <modbus/modbus_buffer.h>
 
+#include <optional>
+
 namespace modbus_gateway {
 
 class ModbusRtuMaster : public exchange::ActorHelper<ModbusRtuMaster> {
@@ -52,7 +54,7 @@ private:
 
 private:
   exchange::ActorId id_;
-  exchange::ExchangePtr exchange_;
+  exchange::ExchangeWeak exchange_;
   asio::serial_port serialPort_;
   std::chrono::milliseconds timeout_;
   modbus::FrameType frameType_;

@@ -17,7 +17,10 @@ void ModbusMessageActor::Receive(const exchange::MessagePtr &message) {
     const exchange::ActorId sourceId = modbusMessage->GetModbusMessageInfo().GetSourceId();
     MG_DEBUG("ModbusMessageActor({})::Receive modbus message from {}", id_, sourceId);
     modbus_gateway::ModbusMessagePtr response = handler_(modbusMessage);
-    exchange_->Send(sourceId, response);
+    auto exchange = exchange_.lock();
+    if (exchange) {
+      exchange->Send(sourceId, response);
+    }
     return;
   }
   MG_CRIT("ModbusMessageActor({})::Receive unknown message type", id_);

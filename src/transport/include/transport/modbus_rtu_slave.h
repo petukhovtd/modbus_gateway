@@ -15,6 +15,8 @@
 #include <modbus/modbus_buffer.h>
 #include <modbus/modbus_types.h>
 
+#include <optional>
+
 namespace modbus_gateway {
 
 class ModbusRtuSlave : public exchange::ActorHelper<ModbusRtuSlave>, public IModbusSlave {
@@ -55,7 +57,7 @@ private:
 
 private:
   exchange::ActorId id_;
-  exchange::ExchangePtr exchange_;
+  exchange::ExchangeWeak exchange_;
   asio::serial_port serialPort_;
   RouterPtr router_;
   modbus::FrameType frameType_;

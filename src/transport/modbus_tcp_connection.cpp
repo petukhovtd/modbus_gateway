@@ -15,7 +15,6 @@ ModbusTcpConnection::ModbusTcpConnection(const exchange::ExchangePtr &exchange, 
                                          TcpSocketPtr socket, const RouterPtr &router)
     : id_(exchange::defaultId), exchange_(exchange), serverId_(serverId), socket_(std::move(socket)), router_(router),
       syncRequestInfo_(std::nullopt) {
-  assert(exchange_);
   assert(socket_);
   assert(router_);
   MG_TRACE("ModbusTcpConnection({})::Ctor: serverId {}", id_, serverId_);
@@ -25,7 +24,7 @@ ModbusTcpConnection::~ModbusTcpConnection() {
   MG_TRACE("ModbusTcpConnection({})::Dtor", id_);
   Stop();
   error_code ec;
-  ec = socket_->shutdown( socket_base::shutdown_both, ec );
+  ec = socket_->shutdown(socket_base::shutdown_both, ec);
   if (ec) {
     MG_WARN("ModbusTcpConnection({})::Dtor: socket shutdown error: {}", id_, ec.message());
   }
@@ -118,14 +117,19 @@ void ModbusTcpConnection::StartReceiveTask() {
                              return;
                            }
 
+                           auto exchange = self->exchange_.lock();
+                           if (!exchange) {
+                             MG_CRIT("ModbusTcpConnection({})::accept: exchange was deleted");
+                             return;
+                           }
+
                            if (ec) {
                              MG_DEBUG("ModbusTcpConnection({})::receive: error: {}", self->id_,
                                       ec.message())
                              if ((error::eof == ec) || (error::connection_reset == ec) || (error::operation_aborted == ec)) {
                                MG_INFO("ModbusTcpConnection({})::receive: send disconnect message",
                                        self->id_);
-                               self->exchange_->Send(self->serverId_,
-                                                     ClientDisconnectMessage::Create(self->id_));
+                               exchange->Send(self->serverId_, ClientDisconnectMessage::Create(self->id_));
                                return;
                              }
                              MG_ERROR("ModbusTcpConnection({})::receive: error: {}", self->id_,
@@ -155,7 +159,7 @@ void ModbusTcpConnection::StartReceiveTask() {
                            const exchange::ActorId slaveId = self->router_->Route(unitId);
                            MG_TRACE("ModbusTcpConnection({})::receive: unit id {} route to slave id {}",
                                     self->id_, message->GetModbusMessageInfo().GetSourceId(), slaveId);
-                           const auto res = self->exchange_->Send(slaveId, message);
+                           const auto res = exchange->Send(slaveId, message);
                            if (!res) {
                              MG_ERROR("ModbusTcpConnection({})::receive: route to slave id {} failed",
                                       self->id_, slaveId);

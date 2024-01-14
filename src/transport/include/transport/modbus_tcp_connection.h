@@ -46,7 +46,7 @@ private:
 
 private:
   std::atomic<exchange::ActorId> id_;
-  exchange::ExchangePtr exchange_;
+  exchange::ExchangeWeak exchange_;
   exchange::ActorId serverId_;
   TcpSocketPtr socket_;
   RouterPtr router_;

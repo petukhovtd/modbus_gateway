@@ -7,6 +7,8 @@
 #include <exchange/actor_helper.h>
 #include <exchange/iexchange.h>
 
+#include <optional>
+
 namespace modbus_gateway {
 
 class ModbusTcpClient : public exchange::ActorHelper<ModbusTcpClient> {
@@ -61,7 +63,7 @@ private:
 
 private:
   exchange::ActorId id_;
-  exchange::ExchangePtr exchange_;
+  exchange::ExchangeWeak exchange_;
   TcpSocketPtr socket_;
   asio::ip::tcp::endpoint ep_;
   std::chrono::milliseconds timeout_;

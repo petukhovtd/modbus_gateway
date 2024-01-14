@@ -202,6 +202,12 @@ void ModbusRtuMaster::StartReadTask() {
                                   return;
                                 }
 
+                                auto exchange = self->exchange_.lock();
+                                if (!exchange) {
+                                  MG_CRIT("ModbusRtuSlave({})::accept: exchange was deleted");
+                                  return;
+                                }
+
                                 std::lock_guard<std::mutex> lock(self->m_);
 
                                 try {
@@ -220,8 +226,7 @@ void ModbusRtuMaster::StartReadTask() {
 
                                 const auto modbusMessage = self->MakeResponse(modbusBuffer, size);
                                 if (modbusMessage) {
-                                  self->exchange_->Send(modbusMessage->GetModbusMessageInfo().GetSourceId(),
-                                                        modbusMessage);
+                                  exchange->Send(modbusMessage->GetModbusMessageInfo().GetSourceId(), modbusMessage);
                                 }
 
                                 self->QueueProcessUnsafe();

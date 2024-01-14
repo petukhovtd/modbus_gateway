@@ -3,8 +3,6 @@
 #include <common/logger.h>
 #include <modbus/modbus_buffer_tcp_wrapper.h>
 
-//#include <exchange/exchange.h>
-
 namespace modbus_gateway {
 
 ModbusTcpClient::ModbusTcpClient(const exchange::ExchangePtr &exchange,
@@ -294,6 +292,12 @@ void ModbusTcpClient::StartReceiveTask() {
                              return;
                            }
 
+                           auto exchange = self->exchange_.lock();
+                           if (!exchange) {
+                             MG_CRIT("ModbusTcpClient({})::accept: exchange was deleted");
+                             return;
+                           }
+
                            std::lock_guard<std::mutex> lock(self->m_);
 
                            try {
@@ -318,8 +322,7 @@ void ModbusTcpClient::StartReceiveTask() {
 
                            const auto modbusMessage = self->MakeResponse(modbusBuffer, size);
                            if (modbusMessage) {
-                             self->exchange_->Send(modbusMessage->GetModbusMessageInfo().GetSourceId(),
-                                                   modbusMessage);
+                             exchange->Send(modbusMessage->GetModbusMessageInfo().GetSourceId(), modbusMessage);
                            }
 
                            self->state_ = State::Connected;

@@ -27,7 +27,7 @@ public:
 
 private:
   exchange::ActorId id_;
-  exchange::ExchangePtr exchange_;
+  exchange::ExchangeWeak exchange_;
   modbus::TransactionId transactionIdGenerator_;
 };
 

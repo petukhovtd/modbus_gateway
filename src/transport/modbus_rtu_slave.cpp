@@ -91,6 +91,12 @@ void ModbusRtuSlave::StartReadTask() {
                                   return;
                                 }
 
+                                auto exchange = self->exchange_.lock();
+                                if (!exchange) {
+                                  MG_CRIT("ModbusRtuSlave({})::accept: exchange was deleted");
+                                  return;
+                                }
+
                                 if (ec) {
                                   MG_DEBUG("ModbusRtuSlave({})::read: error: {}", self->id_,
                                            ec.message())
@@ -124,7 +130,7 @@ void ModbusRtuSlave::StartReadTask() {
                                 const exchange::ActorId actorId = self->router_->Route(unitId);
                                 MG_TRACE("ModbusRtuSlave({})::read: unit id {} route to actor id {}",
                                          self->id_, unitId, actorId);
-                                const auto res = self->exchange_->Send(actorId, message);
+                                const auto res = exchange->Send(actorId, message);
                                 if (!res) {
                                   MG_ERROR("ModbusRtuSlave({})::read: route to actor id {} failed",
                                            self->id_, actorId);

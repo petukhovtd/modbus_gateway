@@ -40,7 +40,10 @@ void ModbusMessageSender::SendTo(const modbus_gateway::ModbusBufferPtr &modbusBu
   const auto modbusMessageInfo = modbus_gateway::ModbusMessageInfo{id_, transactionId};
   auto modbusMessage = modbus_gateway::ModbusMessage::Create(modbusMessageInfo, modbusBuffer);
   MG_INFO("ModbusMessageSender({})::SendTo: transactionId {}, targetId {}", id_, transactionId, target);
-  exchange_->Send(target, modbusMessage);
+  auto exchange = exchange_.lock();
+  if (exchange) {
+    exchange->Send(target, modbusMessage);
+  }
 }
 
 }// namespace test
