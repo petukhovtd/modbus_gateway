@@ -1,3 +1,17 @@
+set(MG_CXX_OPT
+        -Wall
+#        -Werror
+        -Wextra
+        -Wpedantic
+        -Weffc++
+        -Wold-style-cast
+        -Wconversion
+        -Wctor-dtor-privacy
+        -Woverloaded-virtual
+        -Wno-sign-conversion
+        -Wno-unused-parameter
+        -Wno-uninitialized
+)
 
 add_subdirectory(command_line)
 add_subdirectory(common)
@@ -10,6 +24,7 @@ set(SOURCE
 )
 
 add_library(mg STATIC ${SOURCE})
+target_compile_options(mg PRIVATE ${MG_CXX_OPT})
 target_include_directories(mg PUBLIC .)
 target_link_libraries(mg PUBLIC
         mg_command_line

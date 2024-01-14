@@ -128,7 +128,7 @@ void ModbusTcpServer::ClientDisconnect(exchange::ActorId clientId) {
   std::scoped_lock<std::mutex> lock(mutex_);
   MG_INFO("ModbusTcpServer({})::ClientDisconnect: remove client {}", id_, clientId);
   auto exchange = exchange_.lock();
-  if (!exchange) {
+  if (exchange) {
     exchange->Delete(clientId);
   }
   clientDb_.erase(clientId);
