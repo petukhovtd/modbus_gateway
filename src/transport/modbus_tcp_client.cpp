@@ -24,7 +24,7 @@ ModbusTcpClient::ModbusTcpClient(const exchange::ExchangePtr &exchange,
 }
 
 ModbusTcpClient::~ModbusTcpClient() {
-  MG_TRACE("ModbusTcpClient({})::Dtor: {}:{}", id_);
+  MG_TRACE("ModbusTcpClient({})::Dtor: {}:{}", id_, ep_.address().to_string(), ep_.port());
   if (socket_->is_open()) {
     CloseSocket();
   }
@@ -341,6 +341,7 @@ std::string ModbusTcpClient::StateToStr(State state) {
 }
 
 void ModbusTcpClient::CloseSocket() {
+  MG_TRACE("ModbusTcpClient({})::CloseSocket", id_);
   asio::error_code ec;
   ec = socket_->shutdown(asio::socket_base::shutdown_both, ec);
   if (ec) {
