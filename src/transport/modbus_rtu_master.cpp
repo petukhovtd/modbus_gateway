@@ -66,7 +66,7 @@ void ModbusRtuMaster::ResetId() {
 }
 
 exchange::ActorId ModbusRtuMaster::GetId() {
-  return 0;
+  return id_;
 }
 
 void ModbusRtuMaster::MessageProcess(const ModbusMessagePtr &message) {

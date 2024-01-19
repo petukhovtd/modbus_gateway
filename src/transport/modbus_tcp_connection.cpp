@@ -158,7 +158,7 @@ void ModbusTcpConnection::StartReceiveTask() {
                            const modbus::UnitId unitId = message->GetModbusBuffer()->GetUnitId();
                            const exchange::ActorId slaveId = self->router_->Route(unitId);
                            MG_TRACE("ModbusTcpConnection({})::receive: unit id {} route to slave id {}",
-                                    self->id_, message->GetModbusMessageInfo().GetSourceId(), slaveId);
+                                    self->id_, unitId, slaveId);
                            const auto res = exchange->Send(slaveId, message);
                            if (!res) {
                              MG_ERROR("ModbusTcpConnection({})::receive: route to slave id {} failed",

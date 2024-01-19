@@ -108,7 +108,7 @@ RouterPtr MakeRouter(const std::vector<Master> &masters) {
     if (masterConfig->unitIdSet.empty()) {
       const auto id = masterIt->actor->GetId();
       router = std::make_shared<Router>(id);
-      MG_DEBUG("MG::MakeMasters: route by default to actor id {}", id);
+      MG_DEBUG("MG::MakeRouter: route by default to actor id {}", id);
       ++masterIt;
     } else {
       router = std::make_shared<Router>();
@@ -125,7 +125,7 @@ RouterPtr MakeRouter(const std::vector<Master> &masters) {
       for (modbus::UnitId unitId = unitIdRange.begin; unitId <= unitIdRange.end; ++unitId) {
         const auto id = master.actor->GetId();
         router->Set(unitId, id);
-        MG_DEBUG("MG::MakeMasters: route unit id {} to actor id {}", unitId, id)
+        MG_DEBUG("MG::MakeRouter: route unit id {} to actor id {}", unitId, id)
       }
     }
   });
