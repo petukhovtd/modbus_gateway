@@ -32,10 +32,11 @@ ModbusRtuSlave::ModbusRtuSlave(const exchange::ExchangePtr &exchange,
   assert(router);
   assert(frameType_ != modbus::TCP);
 
-  MG_TRACE("ModbusRtuSlave::Ctor: {}", device);
+  MG_DEBUG("ModbusRtuSlave({})::Ctor: {}", id_, device);
 }
 
 ModbusRtuSlave::~ModbusRtuSlave() {
+  MG_DEBUG("ModbusRtuSlave({})::Dtor", id_);
   Stop();
   asio::error_code ec;
   ec = serialPort_.close(ec);
@@ -45,7 +46,6 @@ ModbusRtuSlave::~ModbusRtuSlave() {
 }
 
 void ModbusRtuSlave::Receive(const exchange::MessagePtr &message) {
-  MG_TRACE("ModbusRtuSlave({})::Receive", id_);
   const ModbusMessagePtr &modbusMessage = std::dynamic_pointer_cast<ModbusMessagePtr::element_type>(message);
   if (modbusMessage) {
     MG_TRACE("ModbusRtuSlave({})::Receive: ModbusMessage", id_);
@@ -64,14 +64,16 @@ void ModbusRtuSlave::ResetId() {
 }
 
 exchange::ActorId ModbusRtuSlave::GetId() {
-  return 0;
+  return id_;
 }
 
 void ModbusRtuSlave::Start() {
+  MG_DEBUG("ModbusRtuSlave({})::Start", id_);
   StartReadTask();
 }
 
 void ModbusRtuSlave::Stop() {
+  MG_DEBUG("ModbusRtuSlave({})::Stop", id_);
   asio::error_code ec;
   ec = serialPort_.cancel(ec);
   if (ec) {
@@ -87,31 +89,29 @@ void ModbusRtuSlave::StartReadTask() {
                               [weak, modbusBuffer](asio::error_code ec, size_t size) {
                                 Ptr self = weak.lock();
                                 if (!self) {
-                                  MG_CRIT("ModbusRtuSlave::read: actor was deleted");
+                                  MG_WARN("ModbusRtuSlave::read: actor was deleted");
                                   return;
                                 }
 
                                 auto exchange = self->exchange_.lock();
                                 if (!exchange) {
-                                  MG_CRIT("ModbusRtuSlave({})::accept: exchange was deleted");
+                                  MG_WARN("ModbusRtuSlave({})::accept: exchange was deleted");
                                   return;
                                 }
 
                                 if (ec) {
-                                  MG_DEBUG("ModbusRtuSlave({})::read: error: {}", self->id_,
-                                           ec.message())
-                                  if ((asio::error::eof == ec) || (asio::error::connection_reset == ec) || (asio::error::operation_aborted == ec)) {
+                                  if ((asio::error::eof == ec)
+                                      || (asio::error::connection_reset == ec)
+                                      || (asio::error::operation_aborted == ec)) {
                                     MG_INFO("ModbusRtuSlave({})::read: cancelled", self->id_);
                                     return;
                                   }
-                                  MG_ERROR("ModbusRtuSlave({})::read: error: {}", self->id_,
-                                           ec.message())
-                                  MG_TRACE("ModbusRtuSlave({})::read: start receive task", self->id_);
+                                  MG_ERROR("ModbusRtuSlave({})::read: error: {}", self->id_, ec.message());
                                   self->StartReadTask();
                                   return;
                                 }
 
-                                MG_DEBUG("ModbusRtuSlave({})::read: {} bytes", self->id_, size);
+                                MG_TRACE("ModbusRtuSlave({})::read: {} bytes", self->id_, size);
                                 auto message = self->MakeRequest(modbusBuffer, size);
                                 if (!message) {
                                   MG_ERROR("ModbusRtuSlave: receive: invalid request, start receive task");
@@ -120,22 +120,19 @@ void ModbusRtuSlave::StartReadTask() {
                                 }
 
                                 {
-                                  MG_TRACE("ModbusRtuSlave({})::read: update modbus message info",
-                                           self->id_);
                                   auto access = self->syncRequestInfo_.GetAccess();
                                   access.ref = message->GetModbusMessageInfo();
                                 }
 
                                 const modbus::UnitId unitId = message->GetModbusBuffer()->GetUnitId();
                                 const exchange::ActorId actorId = self->router_->Route(unitId);
-                                MG_TRACE("ModbusRtuSlave({})::read: unit id {} route to actor id {}",
+                                MG_DEBUG("ModbusRtuSlave({})::read: unit id {} route to actor id {}",
                                          self->id_, unitId, actorId);
                                 const auto res = exchange->Send(actorId, message);
                                 if (!res) {
                                   MG_ERROR("ModbusRtuSlave({})::read: route to actor id {} failed",
                                            self->id_, actorId);
                                 }
-                                MG_TRACE("ModbusRtuSlave({})::read: start receive task", self->id_);
                                 self->StartReadTask();
                               });
 }
@@ -154,15 +151,10 @@ ModbusMessagePtr ModbusRtuSlave::MakeRequest(const ModbusBufferPtr &modbusBuffer
     return nullptr;
   }
 
+  // Generate transaction id for identification response
   const auto transactionId = GetNextId();
 
-  MG_DEBUG("ModbusRtuSlave({})::MakeRequest: request: transaction id {}, "
-           "unit id {}, "
-           "function code {}",
-           id_,
-           transactionId,
-           modbusBuffer->GetUnitId(),
-           modbusBuffer->GetFunctionCode());
+  MG_DEBUG("ModbusRtuSlave({})::MakeRequest: transaction id {}", id_, transactionId);
 
   ModbusMessageInfo modbusMessageInfo(id_, transactionId);
   return std::make_shared<ModbusMessagePtr::element_type>(modbusMessageInfo, modbusBuffer);
@@ -184,27 +176,22 @@ void ModbusRtuSlave::StartWriteTask(const ModbusMessagePtr &modbusMessage) {
                                [weak, modbusBuffer](asio::error_code ec, size_t size) {
                                  Ptr self = weak.lock();
                                  if (!self) {
-                                   MG_CRIT("ModbusRtuSlave::write: actor was deleted");
+                                   MG_WARN("ModbusRtuSlave::write: actor was deleted");
                                    return;
                                  }
 
                                  if (ec) {
-                                   MG_ERROR("ModbusRtuSlave({})::write: error: {}", self->id_, ec.message());
+                                   MG_WARN("ModbusRtuSlave({})::write: error: {}", self->id_, ec.message());
                                    return;
                                  }
 
-                                 MG_DEBUG("ModbusRtuSlave({})::write: {} bytes", self->id_, size);
+                                 MG_TRACE("ModbusRtuSlave({})::write: {} bytes", self->id_, size);
                                });
 }
 
 ModbusBufferPtr ModbusRtuSlave::MakeResponse(const ModbusMessagePtr &modbusMessage) {
-  MG_TRACE("ModbusRtuSlave({})::MakeResponse", id_);
-
   const ModbusMessageInfo &messageInfo = modbusMessage->GetModbusMessageInfo();
   ModbusBufferPtr modbusBuffer = modbusMessage->GetModbusBuffer();
-
-  MG_TRACE("ModbusRtuSlave({})::MakeResponse: message source id {}, transaction id {}", id_,
-           messageInfo.GetSourceId(), messageInfo.GetTransactionId());
 
   if (id_ != messageInfo.GetSourceId()) {
     MG_CRIT("ModbusRtuSlave({})::MakeResponse: invalid message source id {}",
@@ -231,7 +218,6 @@ ModbusBufferPtr ModbusRtuSlave::MakeResponse(const ModbusMessagePtr &modbusMessa
           messageInfo.GetTransactionId(), lastInfo.GetTransactionId());
       return nullptr;
     }
-    MG_TRACE("ModbusRtuSlave({})::MakeResponse: message info checking successfully", id_);
     modbusMessageInfoOpt.reset();
   }
 
@@ -241,20 +227,18 @@ ModbusBufferPtr ModbusRtuSlave::MakeResponse(const ModbusMessagePtr &modbusMessa
     return nullptr;
   }
 
+  const auto originType = modbusBuffer->GetType();
   modbusBuffer->ConvertTo(frameType_);
 
   auto wrapper = modbus::MakeModbusBufferWrapper(*modbusBuffer);
   wrapper->Update();
 
-  MG_DEBUG("ModbusRtuSlave({})::MakeResponse: response: transaction id {}, "
-           "unit id {}, "
-           "function code {}",
+  MG_DEBUG("ModbusRtuSlave({})::MakeResponse: frame type {}->{}, transaction Id {}",
            id_,
-           modbusMessage->GetModbusMessageInfo().GetTransactionId(),
-           modbusBuffer->GetUnitId(),
-           modbusBuffer->GetFunctionCode());
-
-  MG_TRACE("ModbusRtuSlave({})::MakeResponse: response: [{:X}]", id_, fmt::join(*modbusBuffer, " "));
+           static_cast<int>(originType),
+           static_cast<int>(frameType_),
+           static_cast<int>(messageInfo.GetTransactionId()));
+  MG_DEBUG("ModbusRtuSlave({})::MakeResponse: response: [{:X}]", id_, fmt::join(*modbusBuffer, " "));
 
   return modbusBuffer;
 }

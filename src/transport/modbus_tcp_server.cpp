@@ -16,11 +16,10 @@ ModbusTcpServer::ModbusTcpServer(const exchange::ExchangePtr &exchange, const Co
       acceptor_(*context, TcpEndpoint(addr, port)),
       router_(router) {
   assert(router_);
-  MG_TRACE("ModbusTcpServer({})::Ctor: {}:{}", id_, addr.to_string(), port);
+  MG_DEBUG("ModbusTcpServer({})::Ctor: {}:{}", id_, addr.to_string(), port);
 }
 
 void ModbusTcpServer::Receive(const exchange::MessagePtr &message) {
-  MG_TRACE("ModbusTcpServer({})::Receive", id_);
   auto ptr = dynamic_cast<ClientDisconnectMessage *>(message.get());
   if (ptr) {
     MG_TRACE("ModbusTcpServer({})::Receive: ClientDisconnectMessage", id_);
@@ -44,12 +43,12 @@ exchange::ActorId ModbusTcpServer::GetId() {
 
 void ModbusTcpServer::Start() {
   assert(id_ != exchange::defaultId);
-  MG_INFO("ModbusTcpServer({})::Start", id_);
+  MG_DEBUG("ModbusTcpServer({})::Start", id_);
   AcceptTask();
 }
 
 void ModbusTcpServer::Stop() {
-  MG_INFO("ModbusTcpServer({})::Stop", id_);
+  MG_DEBUG("ModbusTcpServer({})::Stop", id_);
   error_code ec;
   ec = acceptor_.cancel(ec);
   if (ec) {
@@ -57,10 +56,10 @@ void ModbusTcpServer::Stop() {
   }
   {
     std::scoped_lock<std::mutex> lock(mutex_);
+    auto exchange = exchange_.lock();
     for (const auto &[clientId, client] : clientDb_) {
       MG_INFO("ModbusTcpServer({})::Stop: remove client {}", id_, clientId);
       client->Stop();
-      auto exchange = exchange_.lock();
       if (exchange) {
         exchange->Delete(clientId);
       }
@@ -70,7 +69,7 @@ void ModbusTcpServer::Stop() {
 }
 
 ModbusTcpServer::~ModbusTcpServer() {
-  MG_TRACE("ModbusTcpServer({})::Dtor", id_);
+  MG_DEBUG("ModbusTcpServer({})::Dtor", id_);
   Stop();
   error_code ec;
   ec = acceptor_.close(ec);
@@ -87,22 +86,21 @@ void ModbusTcpServer::AcceptTask() {
   acceptor_.async_accept(*rawSocket, [weak, socket = std::move(socket)](error_code ec) mutable {
     Ptr self = weak.lock();
     if (!self) {
-      MG_CRIT("ModbusTcpServer::accept: actor was deleted");
+      MG_WARN("ModbusTcpServer::accept: actor was deleted");
       return;
     }
     auto exchange = self->exchange_.lock();
     if (!exchange) {
-      MG_CRIT("ModbusTcpServer({})::accept: exchange was deleted");
+      MG_WARN("ModbusTcpServer({})::accept: exchange was deleted");
       return;
     }
 
     if (ec) {
-      MG_ERROR("ModbusTcpServer({})::accept: error: {}", self->id_, ec.message());
       if (error::operation_aborted == ec) {
         MG_INFO("ModbusTcpServer({})::accept: canceled", self->id_);
         return;
       }
-      MG_TRACE("ModbusTcpServer({})::accept: start accept task", self->id_);
+      MG_ERROR("ModbusTcpServer({})::accept: error: {}", self->id_, ec.message());
       self->AcceptTask();
       return;
     }
@@ -117,9 +115,7 @@ void ModbusTcpServer::AcceptTask() {
       clientId = exchange->Add(tcpClient);
       self->clientDb_[clientId] = tcpClient;
     }
-    MG_TRACE("ModbusTcpServer({})::accept: start clientId {}", self->id_, clientId);
     tcpClient->Start();
-    MG_TRACE("ModbusTcpServer({})::accept: start accept task", self->id_);
     self->AcceptTask();
   });
 }

@@ -49,7 +49,7 @@ std::vector<Master> MakeMasters(const std::vector<TransportConfigPtr> &mastersCo
                                                tcpClientConfig->port,
                                                tcpClientConfig->timeout);
       const auto actorId = exchange->Add(tcpClient);
-      MG_DEBUG("MG::MakeMasters: Create modbus tcp client; address {}, port {}, timeout {}, actor id {}",
+      MG_INFO("MG::MakeMasters: Create modbus tcp client; address {}, port {}, timeout {}, actor id {}",
                tcpClientConfig->address.to_string(), tcpClientConfig->port, tcpClientConfig->timeout.count(), actorId);
 
       Master client = {tcpClientConfig, tcpClient};
@@ -71,7 +71,7 @@ std::vector<Master> MakeMasters(const std::vector<TransportConfigPtr> &mastersCo
                                                rtuMasterConfig->timeout,
                                                rtuMasterConfig->GetFrameType());
       const auto actorId = exchange->Add(rtuMaster);
-      MG_DEBUG("MG::MakeMasters: create modbus rtu master; device {}, timeout {}, frame type {} actor id {}",
+      MG_INFO("MG::MakeMasters: create modbus rtu master; device {}, timeout {}, frame type {} actor id {}",
                rtuMasterConfig->device, rtuMasterConfig->timeout.count(), rtuMasterConfig->GetFrameType(), actorId);
 
       Master client = {rtuMasterConfig, rtuMaster};
@@ -108,7 +108,7 @@ RouterPtr MakeRouter(const std::vector<Master> &masters) {
     if (masterConfig->unitIdSet.empty()) {
       const auto id = masterIt->actor->GetId();
       router = std::make_shared<Router>(id);
-      MG_DEBUG("MG::MakeRouter: route by default to actor id {}", id);
+      MG_INFO("MG::MakeRouter: route by default to actor id {}", id);
       ++masterIt;
     } else {
       router = std::make_shared<Router>();
@@ -125,7 +125,7 @@ RouterPtr MakeRouter(const std::vector<Master> &masters) {
       for (modbus::UnitId unitId = unitIdRange.begin; unitId <= unitIdRange.end; ++unitId) {
         const auto id = master.actor->GetId();
         router->Set(unitId, id);
-        MG_DEBUG("MG::MakeRouter: route unit id {} to actor id {}", unitId, id)
+        MG_INFO("MG::MakeRouter: route unit id {} to actor id {}", unitId, id);
       }
     }
   });
@@ -150,8 +150,8 @@ std::vector<Slave> MakeSlaves(const std::vector<TransportConfigPtr> &slavesConfi
                                                                            tcpServerConfig->port,
                                                                            router);
       const exchange::ActorId id = exchange->Add(tcpServer);
-      MG_DEBUG("MG::MakeMasters: create modbus tcp server address {}, port {}, actor id {}",
-               tcpServerConfig->address.to_string(), tcpServerConfig->port, id)
+      MG_INFO("MG::MakeSlaves: create modbus tcp server address {}, port {}, actor id {}",
+               tcpServerConfig->address.to_string(), tcpServerConfig->port, id);
       Slave server = {tcpServerConfig, tcpServer};
       slaves.push_back(server);
     } break;
@@ -167,8 +167,8 @@ std::vector<Slave> MakeSlaves(const std::vector<TransportConfigPtr> &slavesConfi
                                                                         router,
                                                                         rtuSlaveConfig->GetFrameType());
       const exchange::ActorId id = exchange->Add(rtuSlave);
-      MG_DEBUG("MG::MakeMasters: create modbus rtu slave device {}, frame type {}, actor id {}",
-               rtuSlaveConfig->device, rtuSlaveConfig->GetFrameType(), id)
+      MG_INFO("MG::MakeSlaves: create modbus rtu slave device {}, frame type {}, actor id {}",
+               rtuSlaveConfig->device, rtuSlaveConfig->GetFrameType(), id);
       Slave server = {rtuSlaveConfig, rtuSlave};
       slaves.push_back(server);
     } break;
@@ -181,10 +181,15 @@ std::vector<Slave> MakeSlaves(const std::vector<TransportConfigPtr> &slavesConfi
 }
 
 int ModbusGateway(const Config &config) {
+
+  Logger::SetLogLevel(config.configService.logLevel);
+  MG_INFO("MG: loglevel {}", config.configService.logLevel);
+
   auto actorStorage = std::make_unique<exchange::ActorStorageHT>();
   auto exchange = std::make_shared<exchange::Exchange>(std::move(actorStorage));
 
   ContextPtr context = std::make_shared<ContextPtr::element_type>(config.configService.threads);
+  MG_INFO("MG: threads {}", config.configService.threads);
   auto work = asio::executor_work_guard(context->get_executor());
 
   asio::signal_set signalSet(*context);
@@ -197,10 +202,10 @@ int ModbusGateway(const Config &config) {
 
   signalSet.async_wait([context](const asio::error_code &ec, int signalNumber) {
     if (ec) {
-      MG_INFO("SignalSet::wait: error: {}", ec.message());
+      MG_ERROR("SignalSet::wait: error: {}", ec.message());
       return;
     }
-    MG_INFO("SignalSet::wait: signal {}", signalNumber)
+    MG_INFO("SignalSet::wait: signal {}", signalNumber);
     context->stop();
   });
 
@@ -219,14 +224,14 @@ int ModbusGateway(const Config &config) {
     throw std::logic_error("BUG! slaves is empty");
   }
 
-  MG_INFO("start slaves");
+  MG_INFO("MG: start slaves");
   for (auto &slave : slaves) {
     slave.Slave->Start();
   }
 
-  MG_INFO("starting")
+  MG_INFO("MG: starting")
   context->run();
-  MG_INFO("stopping")
+  MG_INFO("MG: stopping")
 
   return EXIT_SUCCESS;
 }

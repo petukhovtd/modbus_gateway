@@ -27,15 +27,13 @@ int main(int argc, char *argv[]) {
     Config config(configFile);
     config.Validate();
 
-    Logger::SetLogLevel(config.configService.logLevel);
-
     rc = ModbusGateway(config);
 
   } catch (const ParserException &e) {
 
     std::cerr << "error: " << e.what() << '\n'
-              << "in: " << e.GetTargetKey() << '\n'
-              << "path: " << e.GetFullPath() << std::endl;
+              << "\tin: " << e.GetTargetKey() << '\n'
+              << "\tpath: " << e.GetFullPath() << std::endl;
     rc = EXIT_FAILURE;
 
   } catch (const std::exception &e) {

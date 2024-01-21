@@ -17,11 +17,11 @@ ModbusTcpConnection::ModbusTcpConnection(const exchange::ExchangePtr &exchange, 
       syncRequestInfo_(std::nullopt) {
   assert(socket_);
   assert(router_);
-  MG_TRACE("ModbusTcpConnection({})::Ctor: serverId {}", id_, serverId_);
+  MG_DEBUG("ModbusTcpConnection({})::Ctor: serverId {}", id_, serverId_);
 }
 
 ModbusTcpConnection::~ModbusTcpConnection() {
-  MG_TRACE("ModbusTcpConnection({})::Dtor", id_);
+  MG_DEBUG("ModbusTcpConnection({})::Dtor", id_);
   Stop();
   error_code ec;
   ec = socket_->shutdown(socket_base::shutdown_both, ec);
@@ -35,7 +35,6 @@ ModbusTcpConnection::~ModbusTcpConnection() {
 }
 
 void ModbusTcpConnection::Receive(const exchange::MessagePtr &message) {
-  MG_TRACE("ModbusTcpConnection({})::Receive", id_);
   const ModbusMessagePtr &modbusMessage = std::dynamic_pointer_cast<ModbusMessagePtr::element_type>(message);
   if (modbusMessage) {
     MG_TRACE("ModbusTcpConnection({})::Receive: ModbusMessage", id_);
@@ -81,7 +80,7 @@ ModbusTcpConnection::MakeRequest(const ModbusBufferPtr &modbusBuffer, size_t siz
     MG_ERROR("ModbusTcpConnection({})::MakeRequest: invalid adu size", masterId);
     return nullptr;
   }
-  MG_TRACE("ModbusTcpConnection({})::MakeRequest: request: [{:X}]", masterId, fmt::join(*modbusBuffer, " "))
+  MG_DEBUG("ModbusTcpConnection({})::MakeRequest: request: [{:X}]", masterId, fmt::join(*modbusBuffer, " "))
   modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper(*modbusBuffer);
   modbus::CheckFrameResult checkFrameResult = modbusBufferTcpWrapper.Check();
   if (checkFrameResult != modbus::CheckFrameResult::NoError) {
@@ -89,18 +88,8 @@ ModbusTcpConnection::MakeRequest(const ModbusBufferPtr &modbusBuffer, size_t siz
     return nullptr;
   }
 
-  MG_DEBUG("ModbusTcpConnection({})::MakeRequest: request: transaction id {}, "
-           "protocol id {}, "
-           "length {}, "
-           "unit id {}, "
-           "function code {}",
-           masterId,
-           modbusBufferTcpWrapper.GetTransactionId(),
-           modbusBufferTcpWrapper.GetProtocolId(),
-           modbusBufferTcpWrapper.GetLength(),
-           modbusBuffer->GetUnitId(),
-           modbusBuffer->GetFunctionCode());
-
+  MG_DEBUG("ModbusTcpConnection({})::MakeRequest: transaction id {}", masterId, modbusBufferTcpWrapper.GetTransactionId());
+  // Save origin message id to message info, restore this id in MakeRequest
   ModbusMessageInfo modbusMessageInfo(masterId, modbusBufferTcpWrapper.GetTransactionId());
   return std::make_shared<ModbusMessagePtr::element_type>(modbusMessageInfo, modbusBuffer);
 }
@@ -113,34 +102,29 @@ void ModbusTcpConnection::StartReceiveTask() {
                          [weak, modbusBuffer](error_code ec, size_t size) {
                            Ptr self = weak.lock();
                            if (!self) {
-                             MG_CRIT("ModbusTcpConnection::receive: actor was deleted");
+                             MG_WARN("ModbusTcpConnection::receive: actor was deleted");
                              return;
                            }
 
                            auto exchange = self->exchange_.lock();
                            if (!exchange) {
-                             MG_CRIT("ModbusTcpConnection({})::accept: exchange was deleted");
+                             MG_WARN("ModbusTcpConnection({})::accept: exchange was deleted");
                              return;
                            }
 
                            if (ec) {
-                             MG_DEBUG("ModbusTcpConnection({})::receive: error: {}", self->id_,
-                                      ec.message())
                              if ((error::eof == ec) || (error::connection_reset == ec) || (error::operation_aborted == ec)) {
-                               MG_INFO("ModbusTcpConnection({})::receive: send disconnect message",
-                                       self->id_);
+                               MG_INFO("ModbusTcpConnection({})::receive: send disconnect message, {}",
+                                       self->id_, ec.message());
                                exchange->Send(self->serverId_, ClientDisconnectMessage::Create(self->id_));
                                return;
                              }
-                             MG_ERROR("ModbusTcpConnection({})::receive: error: {}", self->id_,
-                                      ec.message())
-                             MG_TRACE("ModbusTcpConnection({})::receive: start receive task",
-                                      self->id_);
+                             MG_ERROR("ModbusTcpConnection({})::receive: error: {}", self->id_, ec.message())
                              self->StartReceiveTask();
                              return;
                            }
 
-                           MG_DEBUG("ModbusTcpConnection({})::receive: {} bytes", self->id_, size);
+                           MG_TRACE("ModbusTcpConnection({})::receive: {} bytes", self->id_, size);
                            auto message = self->MakeRequest(modbusBuffer, size, self->id_);
                            if (!message) {
                              MG_ERROR("ModbusTcpConnection: receive: invalid request, start receive task");
@@ -149,34 +133,25 @@ void ModbusTcpConnection::StartReceiveTask() {
                            }
 
                            {
-                             MG_TRACE("ModbusTcpConnection({})::receive: update modbus message info",
-                                      self->id_);
                              auto access = self->syncRequestInfo_.GetAccess();
                              access.ref = message->GetModbusMessageInfo();
                            }
 
                            const modbus::UnitId unitId = message->GetModbusBuffer()->GetUnitId();
-                           const exchange::ActorId slaveId = self->router_->Route(unitId);
-                           MG_TRACE("ModbusTcpConnection({})::receive: unit id {} route to slave id {}",
-                                    self->id_, unitId, slaveId);
-                           const auto res = exchange->Send(slaveId, message);
+                           const exchange::ActorId actorId = self->router_->Route(unitId);
+                           MG_DEBUG("ModbusTcpConnection({})::receive: unit id {} route to actor id {}",
+                                    self->id_, unitId, actorId);
+                           const auto res = exchange->Send(actorId, message);
                            if (!res) {
-                             MG_ERROR("ModbusTcpConnection({})::receive: route to slave id {} failed",
-                                      self->id_, slaveId);
+                             MG_ERROR("ModbusTcpConnection({})::receive: send to actor id {} failed", self->id_, actorId);
                            }
-                           MG_TRACE("ModbusTcpConnection({})::receive: start receive task", self->id_);
                            self->StartReceiveTask();
                          });
 }
 
 ModbusBufferPtr ModbusTcpConnection::MakeResponse(const ModbusMessagePtr &modbusMessage) {
-  MG_TRACE("ModbusTcpConnection({})::MakeResponse", id_);
-
   const ModbusMessageInfo &messageInfo = modbusMessage->GetModbusMessageInfo();
   ModbusBufferPtr modbusBuffer = modbusMessage->GetModbusBuffer();
-
-  MG_TRACE("ModbusTcpConnection({})::MakeResponse: message source id {}, transaction id {}", id_,
-           messageInfo.GetSourceId(), messageInfo.GetTransactionId());
 
   if (id_ != messageInfo.GetSourceId()) {
     MG_CRIT("ModbusTcpConnection({})::MakeResponse: invalid message source id {}",
@@ -203,7 +178,6 @@ ModbusBufferPtr ModbusTcpConnection::MakeResponse(const ModbusMessagePtr &modbus
           messageInfo.GetTransactionId(), lastInfo.GetTransactionId());
       return nullptr;
     }
-    MG_TRACE("ModbusTcpConnection({})::MakeResponse: message info checking successfully", id_);
     modbusMessageInfoOpt.reset();
   }
 
@@ -213,24 +187,19 @@ ModbusBufferPtr ModbusTcpConnection::MakeResponse(const ModbusMessagePtr &modbus
     return nullptr;
   }
 
+  const auto originType = modbusBuffer->GetType();
   modbusBuffer->ConvertTo(modbus::FrameType::TCP);
   modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper(*modbusBuffer);
   modbusBufferTcpWrapper.Update();
   modbusBufferTcpWrapper.SetTransactionId(messageInfo.GetTransactionId());
 
-  MG_DEBUG("ModbusTcpConnection({})::MakeResponse: response: transaction id {}, "
-           "protocol id {}, "
-           "length {}, "
-           "unit id {}, "
-           "function code {}",
+  MG_DEBUG("ModbusTcpConnection({})::MakeResponse: frame type {}->{}, transaction Id {}",
            id_,
-           modbusBufferTcpWrapper.GetTransactionId(),
-           modbusBufferTcpWrapper.GetProtocolId(),
-           modbusBufferTcpWrapper.GetLength(),
-           modbusBuffer->GetUnitId(),
-           modbusBuffer->GetFunctionCode());
+           static_cast<int>(originType),
+           static_cast<int>(modbus::FrameType::TCP),
+           static_cast<int>(messageInfo.GetTransactionId()));
 
-  MG_TRACE("ModbusTcpConnection({})::MakeResponse: response: [{:X}]", id_, fmt::join(*modbusBuffer, " "));
+  MG_DEBUG("ModbusTcpConnection({})::MakeResponse: response: [{:X}]", id_, fmt::join(*modbusBuffer, " "));
 
   return modbusBuffer;
 }
@@ -247,7 +216,7 @@ void ModbusTcpConnection::StartSendTask(const ModbusMessagePtr &modbusMessage) {
                       [weak, modbusBuffer](error_code ec, size_t size) {
                         Ptr self = weak.lock();
                         if (!self) {
-                          MG_CRIT("ModbusTcpConnection::send: actor was deleted");
+                          MG_WARN("ModbusTcpConnection::send: actor was deleted");
                           return;
                         }
 
@@ -256,7 +225,7 @@ void ModbusTcpConnection::StartSendTask(const ModbusMessagePtr &modbusMessage) {
                           return;
                         }
 
-                        MG_DEBUG("ModbusTcpConnection({})::send: {} bytes", self->id_, size);
+                        MG_TRACE("ModbusTcpConnection({})::send: {} bytes", self->id_, size);
                       });
 }
 

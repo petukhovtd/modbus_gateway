@@ -20,18 +20,15 @@ ModbusTcpClient::ModbusTcpClient(const exchange::ExchangePtr &exchange,
       currentMessage_(std::nullopt),
       transactionIdGenerator_(0),
       state_(State::Idle) {
-  MG_TRACE("ModbusTcpClient({})::Ctor: {}:{}", id_, addr.to_string(), port);
+  MG_DEBUG("ModbusTcpClient({})::Ctor: {}:{}", id_, addr.to_string(), port);
 }
 
 ModbusTcpClient::~ModbusTcpClient() {
-  MG_TRACE("ModbusTcpClient({})::Dtor: {}:{}", id_, ep_.address().to_string(), ep_.port());
-  if (socket_->is_open()) {
-    CloseSocket();
-  }
+  MG_DEBUG("ModbusTcpClient({})::Dtor: {}:{}", id_, ep_.address().to_string(), ep_.port());
+  CloseSocket();
 }
 
 void ModbusTcpClient::Receive(const exchange::MessagePtr &message) {
-  MG_TRACE("ModbusTcpClient({})::Receive", id_);
   auto modbusMessage = std::dynamic_pointer_cast<ModbusMessagePtr::element_type>(message);
   if (modbusMessage) {
     MG_TRACE("ModbusTcpClient({})::Receive: ModbusMessage", id_);
@@ -57,18 +54,16 @@ void ModbusTcpClient::MessageProcess(const ModbusMessagePtr &message) {
   std::lock_guard<std::mutex> lock(m_);
   messageQueue_.Push(message);
   MG_TRACE("ModbusTcpClient({})::MessageProcess: message in queue {}", id_, messageQueue_.Size());
-
   QueueProcessUnsafe();
 }
 
 void ModbusTcpClient::QueueProcessUnsafe() {
-  MG_TRACE("ModbusTcpClient({})::QueueProcess", id_);
   if (messageQueue_.Empty()) {
-    MG_DEBUG("ModbusTcpClient({})::QueueProcess: queue is empty", id_);
+    MG_TRACE("ModbusTcpClient({})::QueueProcess: queue is empty", id_);
     return;
   }
 
-  MG_TRACE("ModbusTcpClient({})::QueueProcess: state: {}", id_, StateToStr(state_));
+  MG_DEBUG("ModbusTcpClient({})::QueueProcess: queue size: {}, state: {}", id_, messageQueue_.Size(), StateToStr(state_));
 
   switch (state_) {
   case State::Idle:
@@ -87,12 +82,12 @@ void ModbusTcpClient::QueueProcessUnsafe() {
 }
 
 void ModbusTcpClient::StartConnectTaskUnsafe() {
-  MG_INFO("ModbusTcpClient({})::StartConnectTask: connect to {}:{}", id_, ep_.address().to_string(), ep_.port())
+  MG_INFO("ModbusTcpClient({})::StartConnectTask: connect to {}:{}", id_, ep_.address().to_string(), ep_.port());
   Weak weak = GetWeak();
   socket_->async_connect(ep_, [weak](asio::error_code ec) {
     Ptr self = weak.lock();
     if (!self) {
-      MG_CRIT("ModbusTcpClient::connect: actor was deleted")
+      MG_WARN("ModbusTcpClient::connect: actor was deleted")
       return;
     }
 
@@ -101,15 +96,11 @@ void ModbusTcpClient::StartConnectTaskUnsafe() {
     if (ec) {
       self->state_ = State::Idle;
 
-      MG_TRACE("ModbusTcpClient({})::connect: error: {}", self->id_, ec.message());
       if ((asio::error::operation_aborted == ec)) {
         MG_INFO("ModbusTcpClient({})::connect: canceled", self->id_);
         return;
       }
       MG_ERROR("ModbusTcpClient({})::connect: error: {}", self->id_, ec.message());
-      // Что бы не сыпать ошибки в лог при отстуствии сервера, подключаться будем только при новом сообщении
-      //                    MG_INFO( "ModbusTcpMaster: connect: start connect task" )
-      //                    self->StartConnectTask();
       return;
     }
 
@@ -117,17 +108,14 @@ void ModbusTcpClient::StartConnectTaskUnsafe() {
 
     MG_INFO("ModbusTcpClient({})::connect: connect to {}:{} successful", self->id_,
             self->socket_->remote_endpoint().address().to_string(),
-            self->socket_->remote_endpoint().port())
-
-    MG_TRACE("ModbusTcpClient({})::connect: start queue process", self->id_);
+            self->socket_->remote_endpoint().port());
     self->QueueProcessUnsafe();
   });
 }
 
 void ModbusTcpClient::StartMessageTaskUnsafe() {
-  MG_TRACE("ModbusTcpClient({})::StartMessageTask", id_);
   if (currentMessage_) {
-    MG_INFO("ModbusTcpClient({})::StartMessageTask: message in process", id_);
+    MG_DEBUG("ModbusTcpClient({})::StartMessageTask: message in process", id_);
     return;
   }
 
@@ -154,26 +142,20 @@ void ModbusTcpClient::StartMessageTaskUnsafe() {
   messageQueue_.Pop();
 
   ModbusBufferPtr modbusBuffer = currentMessage_->modbusMessage->GetModbusBuffer();
+  const auto originType = modbusBuffer->GetType();
   modbusBuffer->ConvertTo(modbus::FrameType::TCP);
   {
     modbus::ModbusBufferTcpWrapper modbusBufferTcpWrapper(*modbusBuffer);
     modbusBufferTcpWrapper.Update();
-    const auto originTransactionId = modbusBufferTcpWrapper.GetTransactionId();
     modbusBufferTcpWrapper.SetTransactionId(currentMessage_->id);
 
-    MG_DEBUG("ModbusTcpClient({})::StartMessageTask: request: transaction id {}, "
-             "origin transaction id {}, "
-             "protocol id {}, "
-             "length {}, "
-             "unit id {}, "
-             "function code {}",
+    MG_DEBUG("ModbusTcpClient({})::StartMessageTask: frame type {}->{}, actor id {}, transaction Id {}->{}",
              id_,
-             modbusBufferTcpWrapper.GetTransactionId(),
-             originTransactionId,
-             modbusBufferTcpWrapper.GetProtocolId(),
-             modbusBufferTcpWrapper.GetLength(),
-             modbusBuffer->GetUnitId(),
-             modbusBuffer->GetFunctionCode())
+             static_cast<int>(originType),
+             static_cast<int>(modbus::FrameType::TCP),
+             static_cast<int>(currentMessage_->modbusMessage->GetModbusMessageInfo().GetSourceId()),
+             static_cast<int>(currentMessage_->modbusMessage->GetModbusMessageInfo().GetTransactionId()),
+             static_cast<int>(currentMessage_->id));
 
     MG_DEBUG("ModbusTcpClient({})::StartMessageTask: request: [{:X}]", id_, fmt::join(*modbusBuffer, " "));
   }
@@ -183,41 +165,38 @@ void ModbusTcpClient::StartMessageTaskUnsafe() {
                       [weak](asio::error_code ec, size_t size) {
                         Ptr self = weak.lock();
                         if (!self) {
-                          MG_CRIT("ModbusTcpClient::send: actor was deleted")
+                          MG_WARN("ModbusTcpClient::send: actor was deleted")
                           return;
                         }
 
                         std::lock_guard<std::mutex> lock(self->m_);
 
                         if (ec) {
-                          MG_ERROR("ModbusTcpClient({})::send: error {}", self->id_, ec.message());
                           self->currentMessage_.reset();
                           if (asio::error::operation_aborted != ec) {
                             MG_INFO("ModbusTcpClient({})::send: close connection", self->id_);
                             self->state_ = State::Idle;
                             self->CloseSocket();
                           }
+                          MG_ERROR("ModbusTcpClient({})::send: error {}", self->id_, ec.message());
                           return;
                         }
 
-                        MG_TRACE("ModbusTcpClient({})::send: start wait task", self->id_);
+                        MG_TRACE("ModbusTcpClient({})::send: send {} bytes", self->id_, size);
                         self->StartWaitTask();
-                        MG_TRACE("ModbusTcpClient({})::send: start receive task", self->id_);
                         self->StartReceiveTask();
                       });
 }
 
 void ModbusTcpClient::StartWaitTask() {
-  MG_TRACE("ModbusTcpClient({})::StartWaitTask", id_);
-
-  MG_DEBUG("ModbusTcpClient({})::StartWaitTask timeout {}ms", id_, timeout_.count())
+  MG_TRACE("ModbusTcpClient({})::StartWaitTask timeout {}ms", id_, timeout_.count());
   timer_.expires_after(timeout_);
 
   Weak weak = GetWeak();
   timer_.async_wait([weak](asio::error_code ec) {
     Ptr self = weak.lock();
     if (!self) {
-      MG_CRIT("ModbusTcpClient::wait: actor was deleted")
+      MG_WARN("ModbusTcpClient::wait: actor was deleted");
       return;
     }
 
@@ -232,7 +211,7 @@ void ModbusTcpClient::StartWaitTask() {
       return;
     }
 
-    MG_TRACE("ModbusTcpClient({})::wait: achieve timeout, cancel receive task", self->id_);
+    MG_ERROR("ModbusTcpClient({})::wait: achieve timeout, cancel receive task", self->id_);
     ec = self->socket_->cancel(ec);
     if (ec) {
       MG_WARN("ModbusTcpClient({})::wait: socket cancel error: {}", self->id_, ec.message());
@@ -242,16 +221,16 @@ void ModbusTcpClient::StartWaitTask() {
 
 ModbusMessagePtr ModbusTcpClient::MakeResponse(const ModbusBufferPtr &modbusBuffer, size_t size) {
   if (!currentMessage_) {
+    MG_ERROR("ModbusTcpClient({})::MakeResponse: current message is empty", id_);
     return nullptr;
   }
 
-  MG_DEBUG("ModbusTcpClient({})::MakeResponse: receive: {} bytes", id_, size);
   if (!modbusBuffer->SetAduSize(size)) {
-    MG_ERROR("ModbusTcpClient({})::MakeResponse: invalid adu size", id_);
+    MG_ERROR("ModbusTcpClient({})::MakeResponse: invalid adu size {}", id_, size);
     return nullptr;
   }
 
-  MG_TRACE("ModbusTcpClient({})::MakeResponse: response: [{:X}]", id_, fmt::join(*modbusBuffer, " "))
+  MG_DEBUG("ModbusTcpClient({})::MakeResponse: response: [{:X}]", id_, fmt::join(*modbusBuffer, " "));
 
   const auto currentMessage = currentMessage_->modbusMessage;
   const auto id = currentMessage_->id;
@@ -274,27 +253,30 @@ ModbusMessagePtr ModbusTcpClient::MakeResponse(const ModbusBufferPtr &modbusBuff
       return nullptr;
     }
   }
-
+  MG_DEBUG("ModbusTcpClient({})::MakeResponse: response: actor id {}, transaction id {}->{}",
+           id_,
+           currentInfo.GetSourceId(),
+           id,
+           currentInfo.GetTransactionId());
   return ModbusMessage::Create(currentInfo, modbusBuffer);
 }
 
 void ModbusTcpClient::StartReceiveTask() {
   MG_TRACE("ModbusTcpClient({})::StartReceiveTask", id_);
-  // Теортерически возможно переиспользовать и входной буффер, но необходимо его
-  // отчистить и выставить максимальный размер
+
   auto modbusBuffer = std::make_shared<modbus::ModbusBuffer>(modbus::FrameType::TCP);
   Weak weak = GetWeak();
   socket_->async_receive(asio::buffer(modbusBuffer->begin().operator->(), modbusBuffer->GetAduSize()),
                          [weak, modbusBuffer](asio::error_code ec, size_t size) {
                            Ptr self = weak.lock();
                            if (!self) {
-                             MG_CRIT("ModbusTcpClient::receive: actor was deleted")
+                             MG_WARN("ModbusTcpClient::receive: actor was deleted")
                              return;
                            }
 
                            auto exchange = self->exchange_.lock();
                            if (!exchange) {
-                             MG_CRIT("ModbusTcpClient({})::accept: exchange was deleted");
+                             MG_WARN("ModbusTcpClient({})::accept: exchange was deleted");
                              return;
                            }
 
@@ -303,14 +285,13 @@ void ModbusTcpClient::StartReceiveTask() {
                            try {
                              const auto tp = self->timer_.expiry() - std::chrono::steady_clock::now();
                              const auto exp = tp.count() / std::chrono::microseconds::period::den;
-                             MG_DEBUG("ModbusTcpClient({})::receive: expiry {}", self->id_, exp);
+                             MG_DEBUG("ModbusTcpClient({})::receive: left {}ms", self->id_, exp);
                              self->timer_.cancel();
                            } catch (const asio::system_error &e) {
                              MG_ERROR("ModbusTcpClient({})::receive: timer cancel error: {}", self->id_, ec.message());
                            }
 
                            if (ec) {
-                             MG_ERROR("ModbusTcpClient({})::receive: error: {}", self->id_, ec.message());
                              self->currentMessage_.reset();
                              if (asio::error::operation_aborted != ec) {
                                MG_INFO("ModbusTcpClient({})::receive: close connection", self->id_);
@@ -318,11 +299,19 @@ void ModbusTcpClient::StartReceiveTask() {
                                self->CloseSocket();
                                return;
                              }
+                             MG_ERROR("ModbusTcpClient({})::receive: error: {}", self->id_, ec.message());
+                             return;
                            }
+
+                           MG_TRACE("ModbusTcpClient({})::receive: receive {} bytes", self->id_, size);
 
                            const auto modbusMessage = self->MakeResponse(modbusBuffer, size);
                            if (modbusMessage) {
-                             exchange->Send(modbusMessage->GetModbusMessageInfo().GetSourceId(), modbusMessage);
+                             const auto actorId = modbusMessage->GetModbusMessageInfo().GetSourceId();
+                             const auto res = exchange->Send(actorId, modbusMessage);
+                             if(!res){
+                               MG_ERROR("ModbusTcpClient({})::receive: send to actorId {} failed", self->id_, actorId);
+                             }
                            }
 
                            self->state_ = State::Connected;
@@ -342,14 +331,16 @@ std::string ModbusTcpClient::StateToStr(State state) {
 
 void ModbusTcpClient::CloseSocket() {
   MG_TRACE("ModbusTcpClient({})::CloseSocket", id_);
-  asio::error_code ec;
-  ec = socket_->shutdown(asio::socket_base::shutdown_both, ec);
-  if (ec) {
-    MG_WARN("ModbusTcpClient({})::CloseSocket: socket shutdown error: {}", id_, ec.message());
-  }
-  ec = socket_->close(ec);
-  if (ec) {
-    MG_WARN("ModbusTcpClient({})::CloseSocket: socket close error: {}", id_, ec.message());
+  if (socket_->is_open()) {
+    asio::error_code ec;
+    ec = socket_->shutdown(asio::socket_base::shutdown_both, ec);
+    if (ec) {
+      MG_WARN("ModbusTcpClient({})::CloseSocket: socket shutdown error: {}", id_, ec.message());
+    }
+    ec = socket_->close(ec);
+    if (ec) {
+      MG_WARN("ModbusTcpClient({})::CloseSocket: socket close error: {}", id_, ec.message());
+    }
   }
 }
 

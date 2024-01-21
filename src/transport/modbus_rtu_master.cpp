@@ -31,10 +31,11 @@ ModbusRtuMaster::ModbusRtuMaster(const exchange::ExchangePtr &exchange,
   assert(exchange);
   assert(frameType_ != modbus::TCP);
 
-  MG_TRACE("ModbusRtuMaster::Ctor: {}", device);
+  MG_DEBUG("ModbusRtuMaster::Ctor: {}", device);
 }
 
 ModbusRtuMaster::~ModbusRtuMaster() {
+  MG_DEBUG("ModbusRtuMaster({})::Dtor", id_);
   asio::error_code ec;
   ec = serialPort_.cancel(ec);
   if (ec) {
@@ -47,7 +48,6 @@ ModbusRtuMaster::~ModbusRtuMaster() {
 }
 
 void ModbusRtuMaster::Receive(const exchange::MessagePtr &message) {
-  MG_TRACE("ModbusRtuMaster({})::Receive", id_);
   auto modbusMessage = std::dynamic_pointer_cast<ModbusMessagePtr::element_type>(message);
   if (modbusMessage) {
     MG_TRACE("ModbusRtuMaster({})::Receive: ModbusMessage", id_);
@@ -73,14 +73,12 @@ void ModbusRtuMaster::MessageProcess(const ModbusMessagePtr &message) {
   std::lock_guard<std::mutex> lock(m_);
   messageQueue_.Push(message);
   MG_TRACE("ModbusRtuMaster({})::MessageProcess: message in queue {}", id_, messageQueue_.Size());
-
   QueueProcessUnsafe();
 }
 
 void ModbusRtuMaster::QueueProcessUnsafe() {
-  MG_TRACE("ModbusRtuMaster({})::QueueProcess", id_);
   if (messageQueue_.Empty()) {
-    MG_DEBUG("ModbusRtuMaster({})::QueueProcess: queue is empty", id_);
+    MG_TRACE("ModbusRtuMaster({})::QueueProcess: queue is empty", id_);
     return;
   }
 
@@ -109,27 +107,26 @@ void ModbusRtuMaster::QueueProcessUnsafe() {
 
   StartMessageTaskUnsafe();
 }
-void ModbusRtuMaster::StartMessageTaskUnsafe() {
-  MG_TRACE("ModbusRtuMaster({})::StartMessageTaskUnsafe", id_);
 
+void ModbusRtuMaster::StartMessageTaskUnsafe() {
   const auto transactionId = ++transactionIdGenerator_;
   currentMessage_ = {messageQueue_.Front(), transactionId};
   messageQueue_.Pop();
 
   ModbusBufferPtr modbusBuffer = currentMessage_->modbusMessage->GetModbusBuffer();
+  const auto originType = modbusBuffer->GetType();
   modbusBuffer->ConvertTo(frameType_);
   {
     auto wrapper = modbus::MakeModbusBufferWrapper(*modbusBuffer);
     wrapper->Update();
 
-    MG_DEBUG("ModbusRtuMaster({})::StartMessageTask: request: transaction id {}, "
-             "unit id {}, "
-             "function code {}",
+    MG_DEBUG("ModbusRtuMaster({})::StartMessageTask: frame type {}->{}, actor id {}, transaction Id {}->{}",
              id_,
-             transactionId,
-             modbusBuffer->GetUnitId(),
-             modbusBuffer->GetFunctionCode())
-
+             static_cast<int>(originType),
+             static_cast<int>(modbus::FrameType::TCP),
+             static_cast<int>(currentMessage_->modbusMessage->GetModbusMessageInfo().GetSourceId()),
+             static_cast<int>(currentMessage_->modbusMessage->GetModbusMessageInfo().GetTransactionId()),
+             static_cast<int>(transactionId));
     MG_DEBUG("ModbusRtuMaster({})::StartMessageTask: request: [{:X}]", id_, fmt::join(*modbusBuffer, " "));
   }
 
@@ -138,7 +135,7 @@ void ModbusRtuMaster::StartMessageTaskUnsafe() {
                                [weak](asio::error_code ec, size_t size) {
                                  Ptr self = weak.lock();
                                  if (!self) {
-                                   MG_CRIT("ModbusRtuMaster::write: actor was deleted")
+                                   MG_WARN("ModbusRtuMaster::write: actor was deleted")
                                    return;
                                  }
 
@@ -150,24 +147,21 @@ void ModbusRtuMaster::StartMessageTaskUnsafe() {
                                    return;
                                  }
 
-                                 MG_TRACE("ModbusRtuMaster({})::write: start wait task", self->id_);
+                                 MG_TRACE("ModbusRtuMaster({})::write: write {} bytes", self->id_, size);
                                  self->StartWaitTask();
-                                 MG_TRACE("ModbusRtuMaster({})::write: start read task", self->id_);
                                  self->StartReadTask();
                                });
 }
 
 void ModbusRtuMaster::StartWaitTask() {
-  MG_TRACE("ModbusRtuMaster({})::StartWaitTask", id_);
-
-  MG_DEBUG("ModbusRtuMaster({})::StartWaitTask timeout {}ms", id_, timeout_.count())
+  MG_TRACE("ModbusRtuMaster({})::StartWaitTask timeout {}ms", id_, timeout_.count())
   timer_.expires_after(timeout_);
 
   Weak weak = GetWeak();
   timer_.async_wait([weak](asio::error_code ec) {
     Ptr self = weak.lock();
     if (!self) {
-      MG_CRIT("ModbusRtuMaster::wait: actor was deleted")
+      MG_WARN("ModbusRtuMaster::wait: actor was deleted")
       return;
     }
 
@@ -182,7 +176,7 @@ void ModbusRtuMaster::StartWaitTask() {
       return;
     }
 
-    MG_TRACE("ModbusRtuMaster({})::wait: achieve timeout, cancel read task", self->id_);
+    MG_ERROR("ModbusRtuMaster({})::wait: achieve timeout, cancel read task", self->id_);
     ec = self->serialPort_.cancel(ec);
     if (ec) {
       MG_WARN("ModbusRtuMaster({})::wait: socket cancel error: {}", self->id_, ec.message());
@@ -198,13 +192,13 @@ void ModbusRtuMaster::StartReadTask() {
                               [weak, modbusBuffer](asio::error_code ec, size_t size) {
                                 Ptr self = weak.lock();
                                 if (!self) {
-                                  MG_CRIT("ModbusRtuMaster::read: actor was deleted")
+                                  MG_WARN("ModbusRtuMaster::read: actor was deleted")
                                   return;
                                 }
 
                                 auto exchange = self->exchange_.lock();
                                 if (!exchange) {
-                                  MG_CRIT("ModbusRtuSlave({})::accept: exchange was deleted");
+                                  MG_WARN("ModbusRtuSlave({})::accept: exchange was deleted");
                                   return;
                                 }
 
@@ -213,7 +207,7 @@ void ModbusRtuMaster::StartReadTask() {
                                 try {
                                   const auto tp = self->timer_.expiry() - std::chrono::steady_clock::now();
                                   const auto exp = tp.count() / std::chrono::microseconds::period::den;
-                                  MG_DEBUG("ModbusRtuMaster({})::read: expiry {}", self->id_, exp);
+                                  MG_DEBUG("ModbusRtuMaster({})::read: left {}ms", self->id_, exp);
                                   self->timer_.cancel();
                                 } catch (const asio::system_error &e) {
                                   MG_ERROR("ModbusRtuMaster({})::read: timer cancel error: {}", self->id_, ec.message());
@@ -222,11 +216,17 @@ void ModbusRtuMaster::StartReadTask() {
                                 if (ec) {
                                   MG_ERROR("ModbusRtuMaster({})::read: error: {}", self->id_, ec.message());
                                   self->currentMessage_.reset();
+                                  return;
                                 }
 
+                                MG_TRACE("ModbusRtuMaster({})::read: receive {} bytes", self->id_, size);
                                 const auto modbusMessage = self->MakeResponse(modbusBuffer, size);
                                 if (modbusMessage) {
-                                  exchange->Send(modbusMessage->GetModbusMessageInfo().GetSourceId(), modbusMessage);
+                                  const auto actorId = modbusMessage->GetModbusMessageInfo().GetSourceId();
+                                  const auto res = exchange->Send(actorId, modbusMessage);
+                                  if (!res) {
+                                    MG_TRACE("ModbusRtuMaster({})::read: send to actorId {} failed", self->id_, actorId);
+                                  }
                                 }
 
                                 self->QueueProcessUnsafe();
@@ -238,15 +238,15 @@ ModbusMessagePtr ModbusRtuMaster::MakeResponse(const ModbusBufferPtr &modbusBuff
     return nullptr;
   }
 
-  MG_DEBUG("ModbusRtuMaster({})::MakeResponse: receive: {} bytes", id_, size);
   if (!modbusBuffer->SetAduSize(size)) {
-    MG_ERROR("ModbusRtuMaster({})::MakeResponse: invalid adu size", id_);
+    MG_ERROR("ModbusRtuMaster({})::MakeResponse: invalid adu size {}", id_, size);
     return nullptr;
   }
 
   MG_TRACE("ModbusRtuMaster({})::MakeResponse: response: [{:X}]", id_, fmt::join(*modbusBuffer, " "))
 
   const auto currentMessage = currentMessage_->modbusMessage;
+  const auto id = currentMessage_->id;
   currentMessage_.reset();
 
   const ModbusMessageInfo currentInfo = currentMessage->GetModbusMessageInfo();
@@ -258,9 +258,13 @@ ModbusMessagePtr ModbusRtuMaster::MakeResponse(const ModbusBufferPtr &modbusBuff
       MG_ERROR("ModbusRtuMaster({})::MakeResponse: check message failed: {}", id_, result)
       return nullptr;
     }
-
-    // maybe need some check?
   }
+
+  MG_DEBUG("ModbusRtuMaster({})::MakeResponse: response: actor id {}, transaction id {}->{}",
+           id_,
+           currentInfo.GetSourceId(),
+           id,
+           currentInfo.GetTransactionId());
 
   return ModbusMessage::Create(currentInfo, modbusBuffer);
 }
