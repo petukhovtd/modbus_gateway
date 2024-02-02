@@ -29,6 +29,13 @@ const std::string character_size = "character_size";
 const std::string parity = "parity";
 const std::string stop_bits = "stop_bits";
 const std::string flow_control = "flow_control";
+const std::string rs485 = "rs485";
+const std::string rtsOnSend = "rts_on_send";
+const std::string rtsAfterSend = "rts_after_send";
+const std::string rxDuringTx = "rx_during_tx";
+const std::string terminateBus = "terminate_bus";
+const std::string delayRtsBeforeSend = "delay_rts_before_send";
+const std::string delayRtsAfterSend = "delay_rts_after_send";
 
 // unit id
 const std::string unitIdSet = "unit_id";

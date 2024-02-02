@@ -90,6 +90,8 @@ asio::ip::address ExtractIpAddress(TracePath &tracePath, const nlohmann::json::v
 
 asio::ip::port_type ExtractIpPort(TracePath &tracePath, const nlohmann::json::value_type &obj);
 
+std::optional<Rs485> ExtractRs485Options(TracePath &tracePath, const nlohmann::json::value_type &obj);
+
 RtuOptions ExtractRtuOptions(TracePath &tracePath, const nlohmann::json::value_type &obj);
 
 NumericRangeType ExtractNumericRangeType(TracePath &tracePath, const nlohmann::json::value_type &obj);

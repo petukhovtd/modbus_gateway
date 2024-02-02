@@ -134,6 +134,28 @@ asio::ip::port_type ExtractIpPort(TracePath &tracePath, const nlohmann::json::va
   return static_cast<asio::ip::port_type>(value);
 }
 
+std::optional<Rs485> ExtractRs485Options(TracePath &tracePath, const nlohmann::json::value_type &obj) {
+  TraceDeep td(tracePath, keys::rs485);
+  const auto it = FindObjectRaw(td, obj);
+  if (obj.end() == it) {
+    return std::nullopt;
+  }
+  const auto &val = it.value();
+  CheckType(td, val, ValueType::Object);
+
+  auto &tp = td.GetTracePath();
+
+  Rs485 rs485;
+  rs485.rtsOnSend = ExtractValueOpt<bool>(tp, val, keys::rtsOnSend, ValueType::Boolean);
+  rs485.rtsAfterSend = ExtractValueOpt<bool>(tp, val, keys::rtsAfterSend, ValueType::Boolean);
+  rs485.rxDuringTx = ExtractValueOpt<bool>(tp, val, keys::rxDuringTx, ValueType::Boolean);
+  rs485.terminateBus = ExtractValueOpt<bool>(tp, val, keys::terminateBus, ValueType::Boolean);
+  rs485.delayRtsBeforeSend = ExtractValueOpt<uint32_t>(tp, val, keys::delayRtsBeforeSend, ValueType::Number);
+  rs485.delayRtsAfterSend = ExtractValueOpt<uint32_t>(tp, val, keys::delayRtsAfterSend, ValueType::Number);
+
+  return rs485;
+}
+
 RtuOptions ExtractRtuOptions(TracePath &tracePath, const nlohmann::json::value_type &obj) {
   RtuOptions rtuOptions{};
 
@@ -176,6 +198,8 @@ RtuOptions ExtractRtuOptions(TracePath &tracePath, const nlohmann::json::value_t
     }
     rtuOptions.flowControl = asio::serial_port_base::flow_control(flowControlOpt.value());
   }
+
+  rtuOptions.rs485 = ExtractRs485Options(tracePath, obj);
 
   return rtuOptions;
 }

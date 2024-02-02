@@ -86,6 +86,14 @@ TEST(ConfigTest, ParsingExampleTest) {
       "parity": "none",
       "stop_bits": 2,
       "flow_control": "none",
+      "rs485": {
+        "rts_on_send": true,
+        "rts_after_send": false,
+        "rx_during_tx": true,
+        "terminate_bus": false,
+        "delay_rts_before_send": 1000,
+        "delay_rts_after_send": 2000
+      },
       "unit_id": [
         {
           "type": "value",
@@ -270,7 +278,15 @@ TEST(ConfigTest, SlaveRtuTest) {
     "character_size": 7,
     "parity": "even",
     "stop_bits": 1.5,
-    "flow_control": "software"
+    "flow_control": "software",
+    "rs485": {
+      "rts_on_send": true,
+      "rts_after_send": false,
+      "rx_during_tx": true,
+      "terminate_bus": false,
+      "delay_rts_before_send": 1000,
+      "delay_rts_after_send": 2000
+    }
   },
   "slave2": {
     "frame_type": "ascii",
@@ -300,11 +316,27 @@ TEST(ConfigTest, SlaveRtuTest) {
 
     EXPECT_EQ(rtuSlaveConfig->GetFrameType(), modbus::RTU);
     EXPECT_STREQ(rtuSlaveConfig->device.c_str(), "/dev/ttyUSB0");
+
     EXPECT_EQ(rtuSlaveConfig->rtuOptions.baudRate.value(), asio::serial_port_base::baud_rate(115200).value());
     EXPECT_EQ(rtuSlaveConfig->rtuOptions.characterSize.value(), asio::serial_port_base::character_size(7).value());
     EXPECT_EQ(rtuSlaveConfig->rtuOptions.parity.value(), asio::serial_port_base::parity(asio::serial_port_base::parity::even).value());
     EXPECT_EQ(rtuSlaveConfig->rtuOptions.stopBits.value(), asio::serial_port_base::stop_bits(asio::serial_port_base::stop_bits::onepointfive).value());
     EXPECT_EQ(rtuSlaveConfig->rtuOptions.flowControl.value(), asio::serial_port_base::flow_control(asio::serial_port_base::flow_control::software).value());
+
+    ASSERT_TRUE(rtuSlaveConfig->rtuOptions.rs485.has_value());
+    const auto& rs485 = rtuSlaveConfig->rtuOptions.rs485.value();
+    ASSERT_TRUE(rs485.rtsOnSend.has_value());
+    EXPECT_TRUE(rs485.rtsOnSend.value());
+    ASSERT_TRUE(rs485.rtsAfterSend.has_value());
+    EXPECT_FALSE(rs485.rtsAfterSend.value());
+    ASSERT_TRUE(rs485.rxDuringTx.has_value());
+    EXPECT_TRUE(rs485.rxDuringTx.value());
+    ASSERT_TRUE(rs485.terminateBus.has_value());
+    EXPECT_FALSE(rs485.terminateBus.value());
+    ASSERT_TRUE(rs485.delayRtsBeforeSend.has_value());
+    EXPECT_EQ(rs485.delayRtsBeforeSend.value(),1000);
+    ASSERT_TRUE(rs485.delayRtsAfterSend.has_value());
+    EXPECT_EQ(rs485.delayRtsAfterSend.value(),2000);
   }
   {
     modbus_gateway::TraceDeep td(tp, "slave2");
@@ -355,6 +387,7 @@ TEST(ConfigTest, SlaveRtuOptionalTest) {
     EXPECT_EQ(rtuSlaveConfig->rtuOptions.parity.value(), asio::serial_port_base::parity().value());
     EXPECT_EQ(rtuSlaveConfig->rtuOptions.stopBits.value(), asio::serial_port_base::stop_bits().value());
     EXPECT_EQ(rtuSlaveConfig->rtuOptions.flowControl.value(), asio::serial_port_base::flow_control().value());
+    EXPECT_FALSE(rtuSlaveConfig->rtuOptions.rs485.has_value());
   }
 }
 
@@ -442,6 +475,14 @@ TEST(ConfigTest, MasterRtuTest) {
     "parity": "odd",
     "stop_bits": 2,
     "flow_control": "hardware",
+    "rs485": {
+      "rts_on_send": false,
+      "rts_after_send": true,
+      "rx_during_tx": false,
+      "terminate_bus": true,
+      "delay_rts_before_send": 3,
+      "delay_rts_after_send": 9999
+    },
     "unit_id": [
       {
         "type": "range",
@@ -505,6 +546,21 @@ TEST(ConfigTest, MasterRtuTest) {
     EXPECT_EQ(rtuMasterConfig->rtuOptions.stopBits.value(), asio::serial_port_base::stop_bits(asio::serial_port_base::stop_bits::two).value());
     EXPECT_EQ(rtuMasterConfig->rtuOptions.flowControl.value(), asio::serial_port_base::flow_control(asio::serial_port_base::flow_control::hardware).value());
     EXPECT_EQ(rtuMasterConfig->unitIdSet.size(), 2);
+
+    ASSERT_TRUE(rtuMasterConfig->rtuOptions.rs485.has_value());
+    const auto& rs485 = rtuMasterConfig->rtuOptions.rs485.value();
+    ASSERT_TRUE(rs485.rtsOnSend.has_value());
+    EXPECT_FALSE(rs485.rtsOnSend.value());
+    ASSERT_TRUE(rs485.rtsAfterSend.has_value());
+    EXPECT_TRUE(rs485.rtsAfterSend.value());
+    ASSERT_TRUE(rs485.rxDuringTx.has_value());
+    EXPECT_FALSE(rs485.rxDuringTx.value());
+    ASSERT_TRUE(rs485.terminateBus.has_value());
+    EXPECT_TRUE(rs485.terminateBus.value());
+    ASSERT_TRUE(rs485.delayRtsBeforeSend.has_value());
+    EXPECT_EQ(rs485.delayRtsBeforeSend.value(),3);
+    ASSERT_TRUE(rs485.delayRtsAfterSend.has_value());
+    EXPECT_EQ(rs485.delayRtsAfterSend.value(),9999);
   }
   {
     modbus_gateway::TraceDeep td(tp, "master2");

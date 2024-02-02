@@ -8,6 +8,7 @@ set(SOURCE
         modbus_tcp_connection.cpp
         modbus_tcp_server.cpp
         router.cpp
+        rtu_options.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE})

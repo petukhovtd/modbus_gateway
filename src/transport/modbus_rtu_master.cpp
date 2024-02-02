@@ -22,11 +22,7 @@ ModbusRtuMaster::ModbusRtuMaster(const exchange::ExchangePtr &exchange,
       currentMessage_(std::nullopt),
       transactionIdGenerator_(0) {
   serialPort_.open(device);
-  serialPort_.set_option(options.baudRate);
-  serialPort_.set_option(options.characterSize);
-  serialPort_.set_option(options.parity);
-  serialPort_.set_option(options.stopBits);
-  serialPort_.set_option(options.flowControl);
+  SetOptions(serialPort_,options);
 
   assert(exchange);
   assert(frameType_ != modbus::TCP);
