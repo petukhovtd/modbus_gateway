@@ -114,7 +114,7 @@ void ModbusTcpClient::StartConnectTaskUnsafe() {
 }
 
 void ModbusTcpClient::StartMessageTaskUnsafe() {
-  if (currentMessage_) {
+  if (currentMessage_.has_value()) {
     MG_DEBUG("ModbusTcpClient({})::StartMessageTask: message in process", id_);
     return;
   }
@@ -173,6 +173,7 @@ void ModbusTcpClient::StartMessageTaskUnsafe() {
 
                         if (ec) {
                           self->currentMessage_.reset();
+                          self->state_ = State::Connected;
                           if (asio::error::operation_aborted != ec) {
                             MG_INFO("ModbusTcpClient({})::send: close connection", self->id_);
                             self->state_ = State::Idle;
@@ -220,7 +221,7 @@ void ModbusTcpClient::StartWaitTask() {
 }
 
 ModbusMessagePtr ModbusTcpClient::MakeResponse(const ModbusBufferPtr &modbusBuffer, size_t size) {
-  if (!currentMessage_) {
+  if (!currentMessage_.has_value()) {
     MG_ERROR("ModbusTcpClient({})::MakeResponse: current message is empty", id_);
     return nullptr;
   }
@@ -293,6 +294,7 @@ void ModbusTcpClient::StartReceiveTask() {
 
                            if (ec) {
                              self->currentMessage_.reset();
+                             self->state_ = State::Connected;
                              if (asio::error::operation_aborted != ec) {
                                MG_INFO("ModbusTcpClient({})::receive: close connection", self->id_);
                                self->state_ = State::Idle;
