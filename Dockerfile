@@ -8,5 +8,5 @@ RUN  \
      && apt install -yy \
      cmake \
      g++-arm-linux-gnueabi \
-     g++-aarch64-linux-gnu
-
+     g++-aarch64-linux-gnu \
+     socat
