@@ -29,7 +29,15 @@
       "character_size": 8,
       "parity": "none",
       "stop_bits": 2,
-      "flow_control": "none"
+      "flow_control": "none",
+      "rs485": {
+        "rts_on_send": true,
+        "rts_after_send": false,
+        "rx_during_tx": true,
+        "terminate_bus": false,
+        "delay_rts_before_send": 1000,
+        "delay_rts_after_send": 2000
+      }
     }
   ],
   "masters": [
