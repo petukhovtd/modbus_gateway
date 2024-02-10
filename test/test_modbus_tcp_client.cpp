@@ -5,9 +5,6 @@
 #include <common/modbus_message_sender.h>
 #include <common/test_modbus_tcp_server.h>
 
-#include <exchange/actor_storage_ht.h>
-#include <exchange/exchange.h>
-
 #include <modbus/modbus_buffer_tcp_wrapper.h>
 
 #include <transport/modbus_tcp_client.h>
@@ -20,7 +17,7 @@ protected:
     contextRunner.Run();
     auto context = contextRunner.GetContext();
 
-    exchange = std::make_shared<exchange::Exchange>(std::make_unique<exchange::ActorStorageHT>());
+    exchange = test::MakeExchange();
 
     modbusMessageSender = test::ModbusMessageSender::Create(exchange);
     const exchange::ActorId modbusMessageSenderId = exchange->Add(modbusMessageSender);

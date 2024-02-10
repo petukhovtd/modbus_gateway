@@ -4,7 +4,7 @@
 
 int main(int argc, char *argv[]) {
 
-    modbus_gateway::Logger::SetLogLevel(modbus_gateway::Logger::LogLevel::Trace);
+    modbus_gateway::Logger::SetLogLevel(modbus_gateway::Logger::LogLevel::Error);
 
     test::RtuCreator rtuCreator;
     rtuCreator.Run();

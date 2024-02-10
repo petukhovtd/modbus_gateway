@@ -2,6 +2,8 @@
 
 #include <modbus/modbus_buffer.h>
 
+#include <exchange/iexchange.h>
+
 namespace test {
 
 template<typename It>
@@ -24,5 +26,7 @@ bool Compare(const Container &lhs, const Container &rhs) {
 }
 
 modbus::ModbusBuffer MakeModbusBuffer(const modbus::AduBuffer &frame, modbus::FrameType type);
+
+exchange::ExchangePtr MakeExchange();
 
 }// namespace test

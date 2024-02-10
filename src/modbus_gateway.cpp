@@ -15,7 +15,8 @@
 #include <config/tcp_client_config.h>
 #include <config/tcp_server_config.h>
 
-#include <exchange/actor_storage_ht.h>
+#include <exchange/actor_storage_table.h>
+#include <exchange/id_generator_reuse.h>
 #include <exchange/exchange.h>
 #include <exchange/iactor.h>
 
@@ -185,8 +186,9 @@ int ModbusGateway(const Config &config) {
   Logger::SetLogLevel(config.configService.logLevel);
   MG_INFO("MG: loglevel {}", config.configService.logLevel);
 
-  auto actorStorage = std::make_unique<exchange::ActorStorageHT>();
-  auto exchange = std::make_shared<exchange::Exchange>(std::move(actorStorage));
+  auto idGenerator = std::make_shared<exchange::IdGeneratorReuse>();
+  auto actorStorage = std::make_unique<exchange::ActorStorageTable>();
+  auto exchange = std::make_shared<exchange::Exchange>(std::move(actorStorage), idGenerator);
 
   ContextPtr context = std::make_shared<ContextPtr::element_type>(config.configService.threads);
   MG_INFO("MG: threads {}", config.configService.threads);

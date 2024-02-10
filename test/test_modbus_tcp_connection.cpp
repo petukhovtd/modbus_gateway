@@ -2,19 +2,16 @@
 
 #include <common/context_runner.h>
 #include <common/misc.h>
-
-#include <exchange/actor_storage_ht.h>
+#include <common/test_modbus_tcp_client.h>
 
 #include <common/modbus_message_actor.h>
 #include <common/single_router.h>
-
-#include <common/test_modbus_tcp_client.h>
-
-#include <exchange/exchange.h>
 #include <message/modbus_message.h>
-#include <modbus/modbus_buffer_tcp_wrapper.h>
-#include <thread>
 #include <transport/modbus_tcp_server.h>
+
+#include <modbus/modbus_buffer_tcp_wrapper.h>
+
+#include <thread>
 
 
 struct ModbusTcpConnectionTest : testing::Test {
@@ -24,7 +21,7 @@ protected:
     contextRunner.Run();
     auto context = contextRunner.GetContext();
 
-    exchange = std::make_shared<exchange::Exchange>(std::make_unique<exchange::ActorStorageHT>());
+    exchange = test::MakeExchange();
     modbusMessageSender = test::ModbusMessageActor::Create(exchange);
 
     const exchange::ActorId modbusEchoActorId = exchange->Add(modbusMessageSender);
