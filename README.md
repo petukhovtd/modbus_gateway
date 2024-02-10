@@ -45,6 +45,7 @@ socat -d -d pty,raw,echo=0,link=port1 pty,raw,echo=0,link=port2
 ## Main idea
 ![plot](./content/modbus_gateway.png)
 ## Config file
+[Config file example](./config_example.json).
 ### Service
 log_level - (trace|debug|info|warning|error|critical)  
 threads - threads count using in service
